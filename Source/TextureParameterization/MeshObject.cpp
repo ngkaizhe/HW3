@@ -355,5 +355,11 @@ void MeshObject::CalculateBoundaryPoints()
 	}
 	glEnd();
 
+	// update to the class var
+	boundaryPoints.clear();
+	for (int i = 0; i < boundaryVertices.size(); i++) {
+		boundaryPoints.push_back(glm::vec3(boundaryVertices[i][0], boundaryVertices[i][1], boundaryVertices[i][2]));
+	}
+
 	boundaryModel.mesh.update_normals();
 }

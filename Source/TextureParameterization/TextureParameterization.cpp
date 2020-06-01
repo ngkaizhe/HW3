@@ -24,7 +24,7 @@ bool isRightButtonPress = false;
 GLuint currentFaceID = 0;
 int currentMouseX = 0;
 int currentMouseY = 0;
-int windowWidth = 600;
+int windowWidth = 1200;
 int windowHeight = 600;
 const std::string ProjectName = "TextureParameterization";
 
@@ -45,7 +45,7 @@ DrawPointShader drawPointShader;
 // vbo for drawing point
 GLuint vboPoint;
 
-int mainWindow;
+int mainWindow, subWindow1, subWindow2;
 enum SelectionMode
 {
 	ADD_FACE,
@@ -136,18 +136,29 @@ void Reshape(int width, int height)
 	windowWidth = width;
 	windowHeight = height;
 
-	TwWindowSize(width, height);
-	glutReshapeWindow(windowWidth, windowHeight);
-	glViewport(0, 0, windowWidth, windowHeight);
+	TwWindowSize(windowWidth / 2, height);
+	// left part
+	glutSetWindow(subWindow1);
+	glutPositionWindow(0, 0);
+	glutReshapeWindow(windowWidth / 2, windowHeight);
+	glViewport(0, 0, windowWidth / 2, windowHeight);
 
-	aspect = windowWidth * 1.0f / windowHeight;
-	meshWindowCam.SetWindowSize(windowWidth, windowHeight);
-	pickingTexture.Init(windowWidth, windowHeight);
+	// right part
+	glutSetWindow(subWindow2);
+	glutPositionWindow(windowWidth / 2, 0);
+	glutReshapeWindow(windowWidth / 2, windowHeight);
+	glViewport(windowWidth / 2, 0, windowWidth / 2, windowHeight);
+
+	aspect = windowWidth / 2 * 1.0f / windowHeight;
+	meshWindowCam.SetWindowSize(windowWidth / 2, windowHeight);
+	pickingTexture.Init(windowWidth/2, windowHeight);
 }
 
 // GLUT callback. Called to draw the scene.
 void RenderMeshWindow()
 {
+	glutSetWindow(subWindow1);
+
 	//Update shaders' input variable
 	///////////////////////////	
 
@@ -277,12 +288,127 @@ void RenderMeshWindow()
 	glutSwapBuffers();
 }
 
-void RenderAll()
-{
-	// render first window
-	RenderMeshWindow();
-	// render second window
+void RenderTextureWindow() {
+	glutSetWindow(subWindow2);
 
+	glClearColor(.7f, .7f, .7f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	if (model.boundaryPoints.size() != 0) {
+		// get the dot in right part render space
+		std::vector<glm::vec2> dotPosition;
+		std::vector<float> dotRangeLeft;
+		float interval = 1.0f;
+		float totalLengthOfLeft = 0;
+
+		// get the total length of left part first 
+		for (int i = 1; i <= model.boundaryPoints.size(); i++) {
+			dotRangeLeft.push_back(glm::distance(model.boundaryPoints[i - 1], 
+				model.boundaryPoints[i % model.boundaryPoints.size()]));
+			totalLengthOfLeft += glm::distance(model.boundaryPoints[i - 1], 
+				model.boundaryPoints[i % model.boundaryPoints.size()]);
+		}
+
+		// init position is zero
+		dotPosition.push_back(glm::vec2(-interval / 2, -interval / 2));
+		float currentRangeLeft = 0;
+		for (int i = 0; i < dotRangeLeft.size() - 1; i++) {
+			currentRangeLeft += dotRangeLeft[i] / totalLengthOfLeft * (interval * 4);
+
+			// PLUSY
+			if (currentRangeLeft >= 0 && currentRangeLeft < interval) {
+				dotPosition.push_back(glm::vec2(-interval/2, -interval/2 + currentRangeLeft));
+			}
+
+			// PLUSX
+			else if (currentRangeLeft >= interval && currentRangeLeft < interval * 2) {
+				float intervalReduced = currentRangeLeft - interval;
+				dotPosition.push_back(glm::vec2(-interval / 2 + intervalReduced, interval / 2));
+			}
+
+			// MINUSY
+			else if (currentRangeLeft >= interval * 2 && currentRangeLeft < interval * 3) {
+				float intervalReduced = currentRangeLeft - interval * 2;
+				dotPosition.push_back(glm::vec2(interval / 2, interval / 2 - intervalReduced));
+			}
+
+			// MINUSX
+			else if (currentRangeLeft >= interval * 3 && currentRangeLeft < interval * 4) {
+				float intervalReduced = currentRangeLeft - interval * 3;
+				dotPosition.push_back(glm::vec2(interval / 2 - intervalReduced, -interval / 2));
+			}
+			
+			else {
+				dotPosition.push_back(glm::vec2(-interval / 2, -interval / 2));
+			}
+		}
+
+		// clear matrix
+		// draw the points that is boundary
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		// draw bg rectangular
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glBegin(GL_QUADS);
+		glColor4f(0, 0, 0, 1.0);
+		glVertex2f(-interval / 2, -interval / 2);
+		glVertex2f(-interval / 2, interval / 2);
+		glVertex2f(interval / 2, interval / 2);
+		glVertex2f(interval / 2, -interval / 2);
+		glEnd();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+
+		// draw line first
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glBegin(GL_LINES);
+		glColor4f(1, 1, 1, 1);
+		// center
+		for (int i = 0; i < dotPosition.size(); i++) {
+			glVertex2f(0, 0);
+			glVertex2f(dotPosition[i][0], dotPosition[i][1]);
+		}
+
+		glEnd();
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		// draw the dot then
+		std::vector<glm::vec4> colors({
+			glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+			glm::vec4(0.0f, 1.0f, 1.0f, 1.0f),
+			glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+			glm::vec4(1.0f, 1.0f, 0.0f, 1.0f),
+		});
+		glPointSize(8);
+		glBegin(GL_POINTS);
+		glColor3f(1, 0, 1);
+		glVertex2f(0, 0);
+		for (int i = 0; i < dotPosition.size(); i++) {
+			// set color
+			glm::vec4 color = colors[i % 4];
+			glColor4f(color[0], color[1], color[2], color[3]);
+			// draw vertex
+			glVertex2f(dotPosition[i][0], dotPosition[i][1]);
+		}
+		glEnd();
+	}
+
+	glutSwapBuffers();
+}
+
+void RenderMain()
+{
+	glutSetWindow(mainWindow);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glutSwapBuffers();
+}
+
+void RenderAll() {
+	RenderMeshWindow();
+	RenderTextureWindow();
 }
 
 
@@ -393,17 +519,31 @@ int main(int argc, char* argv[])
 	glewInit();
 #endif
 
+	// callback for main window
 	glutReshapeFunc(Reshape);
-	glutIdleFunc(RenderAll);
 	glutSetOption(GLUT_RENDERING_CONTEXT, GLUT_USE_CURRENT_CONTEXT);
+	glutDisplayFunc(RenderMain);
+	glutIdleFunc(RenderAll);
+	glutTimerFunc(16, My_Timer, 0);
 	SetupGUI();
 
 	glutMouseFunc(MyMouse);
 	glutKeyboardFunc(MyKeyboard);
 	glutMotionFunc(MyMouseMoving);
-	glutDisplayFunc(RenderMeshWindow);
 	InitOpenGL();
 	InitData();
+
+	// callback for sub window1
+	subWindow1 = glutCreateSubWindow(mainWindow, 0, 0, windowWidth / 2, windowHeight);
+	glutDisplayFunc(RenderMeshWindow);
+	glutMouseFunc(MyMouse);
+	glutKeyboardFunc(MyKeyboard);
+	glutMotionFunc(MyMouseMoving);
+	
+
+	// callback for sub window2
+	subWindow2 = glutCreateSubWindow(mainWindow, 0, 0, windowWidth / 2, windowHeight);
+	glutDisplayFunc(RenderTextureWindow);
 
 	//Print debug information 
 	Common::DumpInfo();
