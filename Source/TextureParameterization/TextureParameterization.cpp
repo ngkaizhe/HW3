@@ -218,6 +218,7 @@ void RenderMeshWindow()
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		glMultMatrixf(value_ptr(mvMat));
+
 		model.CalculateBoundaryPoints();
 	}
 
@@ -294,107 +295,107 @@ void RenderTextureWindow() {
 	glClearColor(.7f, .7f, .7f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (model.boundaryPoints.size() != 0) {
-		// get the dot in right part render space
-		std::vector<glm::vec2> dotPosition;
-		std::vector<float> dotRangeLeft;
-		float interval = 1.0f;
-		float totalLengthOfLeft = 0;
+	//if (model.boundaryPoints.size() != 0) {
+	//	// get the dot in right part render space
+	//	std::vector<glm::vec2> dotPosition;
+	//	std::vector<float> dotRangeLeft;
+	//	float interval = 1.0f;
+	//	float totalLengthOfLeft = 0;
 
-		// get the total length of left part first 
-		for (int i = 1; i <= model.boundaryPoints.size(); i++) {
-			dotRangeLeft.push_back(glm::distance(model.boundaryPoints[i - 1], 
-				model.boundaryPoints[i % model.boundaryPoints.size()]));
-			totalLengthOfLeft += glm::distance(model.boundaryPoints[i - 1], 
-				model.boundaryPoints[i % model.boundaryPoints.size()]);
-		}
+	//	// get the total length of left part first 
+	//	for (int i = 1; i <= model.boundaryPoints.size(); i++) {
+	//		dotRangeLeft.push_back(glm::distance(model.boundaryPoints[i - 1], 
+	//			model.boundaryPoints[i % model.boundaryPoints.size()]));
+	//		totalLengthOfLeft += glm::distance(model.boundaryPoints[i - 1], 
+	//			model.boundaryPoints[i % model.boundaryPoints.size()]);
+	//	}
 
-		// init position is zero
-		dotPosition.push_back(glm::vec2(-interval / 2, -interval / 2));
-		float currentRangeLeft = 0;
-		for (int i = 0; i < dotRangeLeft.size() - 1; i++) {
-			currentRangeLeft += dotRangeLeft[i] / totalLengthOfLeft * (interval * 4);
+	//	// init position is zero
+	//	dotPosition.push_back(glm::vec2(-interval / 2, -interval / 2));
+	//	float currentRangeLeft = 0;
+	//	for (int i = 0; i < dotRangeLeft.size() - 1; i++) {
+	//		currentRangeLeft += dotRangeLeft[i] / totalLengthOfLeft * (interval * 4);
 
-			// PLUSY
-			if (currentRangeLeft >= 0 && currentRangeLeft < interval) {
-				dotPosition.push_back(glm::vec2(-interval/2, -interval/2 + currentRangeLeft));
-			}
+	//		// PLUSY
+	//		if (currentRangeLeft >= 0 && currentRangeLeft < interval) {
+	//			dotPosition.push_back(glm::vec2(-interval/2, -interval/2 + currentRangeLeft));
+	//		}
 
-			// PLUSX
-			else if (currentRangeLeft >= interval && currentRangeLeft < interval * 2) {
-				float intervalReduced = currentRangeLeft - interval;
-				dotPosition.push_back(glm::vec2(-interval / 2 + intervalReduced, interval / 2));
-			}
+	//		// PLUSX
+	//		else if (currentRangeLeft >= interval && currentRangeLeft < interval * 2) {
+	//			float intervalReduced = currentRangeLeft - interval;
+	//			dotPosition.push_back(glm::vec2(-interval / 2 + intervalReduced, interval / 2));
+	//		}
 
-			// MINUSY
-			else if (currentRangeLeft >= interval * 2 && currentRangeLeft < interval * 3) {
-				float intervalReduced = currentRangeLeft - interval * 2;
-				dotPosition.push_back(glm::vec2(interval / 2, interval / 2 - intervalReduced));
-			}
+	//		// MINUSY
+	//		else if (currentRangeLeft >= interval * 2 && currentRangeLeft < interval * 3) {
+	//			float intervalReduced = currentRangeLeft - interval * 2;
+	//			dotPosition.push_back(glm::vec2(interval / 2, interval / 2 - intervalReduced));
+	//		}
 
-			// MINUSX
-			else if (currentRangeLeft >= interval * 3 && currentRangeLeft < interval * 4) {
-				float intervalReduced = currentRangeLeft - interval * 3;
-				dotPosition.push_back(glm::vec2(interval / 2 - intervalReduced, -interval / 2));
-			}
-			
-			else {
-				dotPosition.push_back(glm::vec2(-interval / 2, -interval / 2));
-			}
-		}
+	//		// MINUSX
+	//		else if (currentRangeLeft >= interval * 3 && currentRangeLeft < interval * 4) {
+	//			float intervalReduced = currentRangeLeft - interval * 3;
+	//			dotPosition.push_back(glm::vec2(interval / 2 - intervalReduced, -interval / 2));
+	//		}
+	//		
+	//		else {
+	//			dotPosition.push_back(glm::vec2(-interval / 2, -interval / 2));
+	//		}
+	//	}
 
-		// clear matrix
-		// draw the points that is boundary
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
+	//	// clear matrix
+	//	// draw the points that is boundary
+	//	glMatrixMode(GL_PROJECTION);
+	//	glLoadIdentity();
+	//	glMatrixMode(GL_MODELVIEW);
+	//	glLoadIdentity();
 
-		// draw bg rectangular
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glBegin(GL_QUADS);
-		glColor4f(0, 0, 0, 1.0);
-		glVertex2f(-interval / 2, -interval / 2);
-		glVertex2f(-interval / 2, interval / 2);
-		glVertex2f(interval / 2, interval / 2);
-		glVertex2f(interval / 2, -interval / 2);
-		glEnd();
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	//	// draw bg rectangular
+	//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//	glBegin(GL_QUADS);
+	//	glColor4f(0, 0, 0, 1.0);
+	//	glVertex2f(-interval / 2, -interval / 2);
+	//	glVertex2f(-interval / 2, interval / 2);
+	//	glVertex2f(interval / 2, interval / 2);
+	//	glVertex2f(interval / 2, -interval / 2);
+	//	glEnd();
+	//	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 
-		// draw line first
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glBegin(GL_LINES);
-		glColor4f(1, 1, 1, 1);
-		// center
-		for (int i = 0; i < dotPosition.size(); i++) {
-			glVertex2f(0, 0);
-			glVertex2f(dotPosition[i][0], dotPosition[i][1]);
-		}
+	//	// draw line first
+	//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//	glBegin(GL_LINES);
+	//	glColor4f(1, 1, 1, 1);
+	//	// center
+	//	for (int i = 0; i < dotPosition.size(); i++) {
+	//		glVertex2f(0, 0);
+	//		glVertex2f(dotPosition[i][0], dotPosition[i][1]);
+	//	}
 
-		glEnd();
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	//	glEnd();
+	//	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-		// draw the dot then
-		std::vector<glm::vec4> colors({
-			glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
-			glm::vec4(0.0f, 1.0f, 1.0f, 1.0f),
-			glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
-			glm::vec4(1.0f, 1.0f, 0.0f, 1.0f),
-		});
-		glPointSize(8);
-		glBegin(GL_POINTS);
-		glColor3f(1, 0, 1);
-		glVertex2f(0, 0);
-		for (int i = 0; i < dotPosition.size(); i++) {
-			// set color
-			glm::vec4 color = colors[i % 4];
-			glColor4f(color[0], color[1], color[2], color[3]);
-			// draw vertex
-			glVertex2f(dotPosition[i][0], dotPosition[i][1]);
-		}
-		glEnd();
-	}
+	//	// draw the dot then
+	//	std::vector<glm::vec4> colors({
+	//		glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+	//		glm::vec4(0.0f, 1.0f, 1.0f, 1.0f),
+	//		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+	//		glm::vec4(1.0f, 1.0f, 0.0f, 1.0f),
+	//	});
+	//	glPointSize(8);
+	//	glBegin(GL_POINTS);
+	//	glColor3f(1, 0, 1);
+	//	glVertex2f(0, 0);
+	//	for (int i = 0; i < dotPosition.size(); i++) {
+	//		// set color
+	//		glm::vec4 color = colors[i % 4];
+	//		glColor4f(color[0], color[1], color[2], color[3]);
+	//		// draw vertex
+	//		glVertex2f(dotPosition[i][0], dotPosition[i][1]);
+	//	}
+	//	glEnd();
+	//}
 
 	glutSwapBuffers();
 }

@@ -51,7 +51,8 @@ public:
 	bool FindClosestPoint(unsigned int faceID, glm::vec3 worldPos, glm::vec3& closestPos);
 	void CalculateBoundaryPoints();
 
-	std::vector<glm::vec3> boundaryPoints;
+	// heh init should be public var, so we could used it in the main render
+	MyMesh::HalfedgeHandle heh_init;
 
 private:
 	GLMesh model;
@@ -60,5 +61,17 @@ private:
 	std::vector<int> elemCount;
 
 	GLMesh boundaryModel;
+
+	// property part for old vertex
+	OpenMesh::VPropHandleT<glm::vec3> vColor;
+	OpenMesh::VPropHandleT<OpenMesh::VertexHandle> newVH;
+
+	// property part for new vertex
+	OpenMesh::VPropHandleT<OpenMesh::VertexHandle> oldVH;
+	OpenMesh::VPropHandleT<bool> isBoundary;
+	OpenMesh::VPropHandleT<glm::vec2> texCoord;
+
+	// property part for old edge
+	OpenMesh::EPropHandleT<float> weight;
 };
 

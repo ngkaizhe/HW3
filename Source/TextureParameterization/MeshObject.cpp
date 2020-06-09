@@ -168,7 +168,19 @@ bool MeshObject::Init(std::string fileName)
 {
 	selectedFace.clear();
 
-	return model.Init(fileName);
+	bool retV = model.Init(fileName);
+
+	// add property for model/ old model
+	model.mesh.add_property(newVH);
+	model.mesh.add_property(weight);
+
+	// add property for boundary model/ new model
+	boundaryModel.mesh.add_property(texCoord);
+	boundaryModel.mesh.add_property(oldVH);
+	boundaryModel.mesh.add_property(isBoundary);
+	boundaryModel.mesh.add_property(vColor);
+
+	return retV;
 }
 
 void MeshObject::Render()
@@ -248,12 +260,20 @@ bool MeshObject::FindClosestPoint(unsigned int faceID, glm::vec3 worldPos, glm::
 void MeshObject::CalculateBoundaryPoints()
 {
 	boundaryModel.mesh.clear();
-
 	boundaryModel.mesh.request_vertex_normals();
 	boundaryModel.mesh.request_face_normals();
 
-	std::sort(selectedFace.begin(), selectedFace.end());
+	// the color we initial for used in vertex point color
+	std::vector<glm::vec3> colors = {
+		glm::vec3(0, 0, 1),
+		glm::vec3(1, 0, 0),
+		glm::vec3(0, 1, 0),
+		glm::vec3(1, 1, 0),
+		glm::vec3(0, 1, 1),
+		glm::vec3(1, 0, 1),
+	};
 
+	// record which vertex, we have already added to the boundary model
 	std::map<int, int> usedVertex;
 
 	// get the mesh of selected face
@@ -263,7 +283,6 @@ void MeshObject::CalculateBoundaryPoints()
 
 		// face vhandles
 		std::vector<MyMesh::VertexHandle> face_vhandles;
-		face_vhandles.reserve(3);
 
 		// find each fv iterator
 		for (MyMesh::FaceVertexIter fv_it = model.mesh.fv_iter(fh); fv_it.is_valid(); ++fv_it) {
@@ -282,6 +301,15 @@ void MeshObject::CalculateBoundaryPoints()
 				vh = boundaryModel.mesh.vertex_handle(usedVertex_it->second);
 			}
 
+			// set the "pointer" to have a link between new vertex
+			// old vertex linked to new vertex
+			boundaryModel.mesh.property(oldVH, vh) = *fv_it;
+			boundaryModel.mesh.property(vColor, vh) = colors[i % colors.size()];
+
+			// new vertex linked to old vertex
+			model.mesh.property(newVH, *fv_it) = vh;
+
+			// add the vertex handle for the new mesh(as a new face)
 			face_vhandles.push_back(vh);
 		}
 
@@ -289,76 +317,145 @@ void MeshObject::CalculateBoundaryPoints()
 		boundaryModel.mesh.add_face(face_vhandles);
 	}
 
-	std::cout << "Boundary Mesh total faces are -> " << boundaryModel.mesh.n_faces() << '\n';
-	
-	// get boundaries' vertex
-	std::vector<MyMesh::Point> boundaryVertices;
-
 	// find boundary halfedge first
-	MyMesh::HalfedgeHandle heh, heh_init;
+	MyMesh::HalfedgeHandle heh;
 
 	// loop through all halfedge to check is boundary
 	for (MyMesh::EdgeIter e_it = boundaryModel.mesh.edges_begin(); e_it != boundaryModel.mesh.edges_end(); ++e_it) {
 		// we found the half edge boundary
 		if (boundaryModel.mesh.is_boundary(*e_it)) {
-			if (!heh_init.is_valid()) {
+			// init our half edge handle
+			// get first half edge and check whether it is a boundary or not
+			heh_init = boundaryModel.mesh.halfedge_handle(*e_it, 0);
+			if (boundaryModel.mesh.is_boundary(heh_init)) {
+				break;
+			}
+			// else go to the opposite side
+			else {
 				heh_init = boundaryModel.mesh.halfedge_handle(*e_it, 1);
+				break;
+			}
+		}
+	}
+
+	// if we have any selected face
+	if (selectedFace.size() > 0) {
+		// we will run the same loop 2 times
+		// first time -> add up the total length of the boundary vertices, and set those vertex handle to booundary
+		// second time -> calculate the UV of each boundary vertex handler
+
+		float totalLength3DSpace = 0;
+
+		// init our heh
+		heh = heh_init;
+		do {
+			MyMesh::VertexHandle vh1 = boundaryModel.mesh.from_vertex_handle(heh);
+			MyMesh::VertexHandle vh2 = boundaryModel.mesh.to_vertex_handle(heh);
+
+			// get the point of 2 vertices
+			MyMesh::Point p1 = boundaryModel.mesh.point(vh1);
+			MyMesh::Point p2 = boundaryModel.mesh.point(vh2);
+
+			// get the distance between this 2 vertices
+			totalLength3DSpace += glm::distance(glm::vec3(p1[0], p1[1], p1[2]), glm::vec3(p2[0], p2[1], p2[2]));
+
+			// set isBoundary value of property for the boundary model mesh
+			boundaryModel.mesh.property(isBoundary, vh1) = true;
+
+			// goto next half edge
+			heh = boundaryModel.mesh.next_halfedge_handle(heh);
+		} while (heh != heh_init);
+
+		// now we have the total length
+		// yet we set our uv space to be (0, 0), (0, 1), (1, 1), (1, 0)
+		// so the total length of uv space should be 4
+		float totalLengthUVSpace = 4;
+
+		// init our heh
+		heh = heh_init;
+		// init our first point to be (0,0)
+		MyMesh::VertexHandle vhFirst = boundaryModel.mesh.from_vertex_handle(heh);
+		boundaryModel.mesh.property(this->texCoord, vhFirst) = glm::vec2(0, 0);
+
+		// this variable track the distance for each vertex runned through
+		float currentDis = 0;
+
+		// this loop help us calculate the boundary vh's texture coordinate
+		// we dont run the last loop because we have already initialized it to (0,0)
+		while (boundaryModel.mesh.next_halfedge_handle(heh) != heh_init) {
+			// previous vertex
+			MyMesh::VertexHandle vh1 = boundaryModel.mesh.from_vertex_handle(heh);
+			// next vertex
+			MyMesh::VertexHandle vh2 = boundaryModel.mesh.to_vertex_handle(heh);
+
+			// get the point of 2 vertices
+			MyMesh::Point p1 = boundaryModel.mesh.point(vh1);
+			MyMesh::Point p2 = boundaryModel.mesh.point(vh2);
+
+			// get the distance between this 2 vertices
+			currentDis += glm::distance(glm::vec3(p1[0], p1[1], p1[2]), glm::vec3(p2[0], p2[1], p2[2])) 
+				/ totalLength3DSpace 
+				* totalLengthUVSpace;
+
+			// declare our texture coordinate for this vertex
+			glm::vec2 currentTexCoor;
+
+			// transfer current distance to the uv space
+
+			// PLUSY
+			if (currentDis >= 0 && currentDis <= 1) {
+				currentTexCoor = glm::vec2(0, currentDis);
+			}
+			// PLUSX
+			else if (currentDis > 1 && currentDis <= 2) {
+				currentDis -= 1;
+				currentTexCoor = glm::vec2(currentDis, 0);
+			}
+			// PLUSY
+			else if (currentDis > 2 && currentDis <= 3) {
+				currentDis -= 2;
+				currentTexCoor = glm::vec2(1, 1 - currentDis);
+			}
+			// PLUSY
+			else if (currentDis > 3 && currentDis <= 4) {
+				currentDis -= 3;
+				currentTexCoor = glm::vec2(1 - currentDis, 0);
 			}
 
-			//// get from vertex handle by the half edge handle
-			//MyMesh::VertexHandle vh = boundaryModel.mesh.from_vertex_handle(heh);
-			//boundaryVertices.push_back(boundaryModel.mesh.point(vh));
+			else {
+				throw "The Current Distance shouldn't exceed 4!";
+			}
 
-			//heh = boundaryModel.mesh.next_halfedge_handle(heh);
-			//// loop through other half edge boundary from the first one
-			//// use adjacent halfedge to find all boundary halfedge
-			//while (heh != heh_init) {
-			//	MyMesh::VertexHandle vh = boundaryModel.mesh.from_vertex_handle(heh);
-			//	boundaryVertices.push_back(boundaryModel.mesh.point(vh));
+			// set our texture coordinate value to our property
+			boundaryModel.mesh.property(this->texCoord, vh2) = currentTexCoor;
 
-			//	heh = boundaryModel.mesh.next_halfedge_handle(heh);
-			//}
-			//break;
-		}
-	}
-
-	if (selectedFace.size() > 0) {
-		heh = heh_init;
-		MyMesh::VertexHandle vh = boundaryModel.mesh.from_vertex_handle(heh);
-		boundaryVertices.push_back(boundaryModel.mesh.point(vh));
-
-		heh = boundaryModel.mesh.next_halfedge_handle(heh);
-		while (heh != heh_init) {
-			MyMesh::VertexHandle vh = boundaryModel.mesh.from_vertex_handle(heh);
-			boundaryVertices.push_back(boundaryModel.mesh.point(vh));
-
+			// goto next half edge
 			heh = boundaryModel.mesh.next_halfedge_handle(heh);
 		}
-	}
 
-	std::vector<glm::vec4> colors({
-		glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
-		glm::vec4(0.0f, 1.0f, 1.0f, 1.0f),
-		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
-		glm::vec4(1.0f, 1.0f, 0.0f, 1.0f),
-	});
 
-	// draw the boundary vertices
-	glPointSize(8);
-	glBegin(GL_POINTS);
-	for (int i = 0; i < boundaryVertices.size(); i++) {
-		// set color
-		glm::vec4 color = colors[i % 4];
-		glColor4f(color[0], color[1], color[2], color[3]);
-		// draw vertex
-		glVertex3f(boundaryVertices[i][0], boundaryVertices[i][1], boundaryVertices[i][2]);
-	}
-	glEnd();
+		// now we have calculated all boundary vertices' texture coordinates
+		// start to draw the boundary vertices
+		glPointSize(8);
+		glBegin(GL_POINTS);
 
-	// update to the class var
-	boundaryPoints.clear();
-	for (int i = 0; i < boundaryVertices.size(); i++) {
-		boundaryPoints.push_back(glm::vec3(boundaryVertices[i][0], boundaryVertices[i][1], boundaryVertices[i][2]));
+		// run through the boundary vertices and draw it on our left part model
+		heh = heh_init;
+
+		do {
+			MyMesh::VertexHandle vhFrom = boundaryModel.mesh.from_vertex_handle(heh);
+			MyMesh::Point vPoint = boundaryModel.mesh.point(vhFrom);
+
+			// set color
+			glm::vec3 color = boundaryModel.mesh.property(this->vColor, vhFrom);
+			glColor4f(color[0], color[1], color[2], 1);
+			// draw vertex
+			glVertex3f(vPoint[0], vPoint[1], vPoint[2]);
+
+			// goto next half edge
+			heh = boundaryModel.mesh.next_halfedge_handle(heh);
+		} while (heh != heh_init);
+		glEnd();
 	}
 
 	boundaryModel.mesh.update_normals();
