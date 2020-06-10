@@ -181,7 +181,6 @@ bool MeshObject::Init(std::string fileName)
 	boundaryModel.mesh.add_property(texCoord);
 	boundaryModel.mesh.add_property(oldVH);
 	boundaryModel.mesh.add_property(isBoundary);
-	boundaryModel.mesh.add_property(vColor);
 
 	// compute all weight of the edge handle now
 	for (MyMesh::EIter e_it = model.mesh.edges_begin(); e_it != model.mesh.edges_end(); ++e_it) {
@@ -332,7 +331,6 @@ void MeshObject::CalculateBoundaryPoints()
 			// set the "pointer" to have a link between new vertex
 			// old vertex linked to new vertex
 			boundaryModel.mesh.property(oldVH, vh) = *fv_it;
-			boundaryModel.mesh.property(vColor, vh) = colors[j % colors.size()];
 
 			// new vertex linked to old vertex
 			model.mesh.property(newVH, *fv_it) = vh;
@@ -459,28 +457,6 @@ void MeshObject::CalculateBoundaryPoints()
 			// goto next half edge
 			heh = boundaryModel.mesh.next_halfedge_handle(heh);
 		}
-
-
-		// now we have calculated all boundary vertices' texture coordinates
-		// start to draw the boundary vertices
-		glPointSize(8);
-		glBegin(GL_POINTS);
-
-		for (MyMesh::FIter f_it = boundaryModel.mesh.faces_begin(); f_it != boundaryModel.mesh.faces_end(); ++f_it) {
-			// for each face, we draw its vertex
-			for (MyMesh::FaceVertexIter fv_it = boundaryModel.mesh.fv_begin(*f_it); fv_it != boundaryModel.mesh.fv_end(*f_it); ++fv_it) {
-				// get vh handler
-				MyMesh::VertexHandle vhF = *fv_it;
-				// get color from property
-				glm::vec3 color = boundaryModel.mesh.property(this->vColor, vhF);
-				// get texture coordinate from property
-				MyMesh::Point v_point = boundaryModel.mesh.point(vhF);
-
-				glColor3f(color[0], color[1], color[2]);
-				glVertex3f(v_point[0], v_point[1], v_point[2]);
-			}
-		}
-		glEnd();
 	}
 
 	boundaryModel.mesh.update_normals();

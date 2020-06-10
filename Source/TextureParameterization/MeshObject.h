@@ -60,7 +60,6 @@ public:
 
 	// when getting property from main, we need the property name too
 	// property part for old vertex
-	OpenMesh::VPropHandleT<glm::vec3> vColor;
 	OpenMesh::VPropHandleT<OpenMesh::VertexHandle> newVH;
 
 	// property part for new vertex

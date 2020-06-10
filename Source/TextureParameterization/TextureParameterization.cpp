@@ -121,7 +121,7 @@ void InitData()
 {
 	ResourcePath::shaderPath = "./Shader/" + ProjectName + "/";
 	ResourcePath::imagePath = "./Imgs/" + ProjectName + "/";
-	ResourcePath::modelPath = "./Model/armadillo.obj";
+	ResourcePath::modelPath = "./Model/UnionSphere.obj";
 
 	//Initialize shaders
 	///////////////////////////	
@@ -441,52 +441,6 @@ void RenderTextureWindow() {
 	}
 	glEnd();
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	// we will draw all faces' points according to it 3 vertices and 3 color
-	glPointSize(8);
-	glBegin(GL_POINTS);
-	for (MyMesh::FIter f_it = model.boundaryModel.mesh.faces_begin(); f_it != model.boundaryModel.mesh.faces_end(); ++f_it) {
-		// for each face, we draw its vertex
-		for (MyMesh::FaceVertexIter fv_it = model.boundaryModel.mesh.fv_begin(*f_it); fv_it != model.boundaryModel.mesh.fv_end(*f_it); ++fv_it) {
-			// get vh handler
-			MyMesh::VertexHandle vhF = *fv_it;
-			// get color from property
-			glm::vec3 color = model.boundaryModel.mesh.property(model.vColor, vhF);
-			// get texture coordinate from property
-			glm::vec2 textCoor = model.boundaryModel.mesh.property(model.texCoord, vhF);
-
-			glColor3f(color[0], color[1], color[2]);
-			glVertex3f(textCoor[0], textCoor[1], 0);
-		}
-	}
-	glEnd();
-
-	// draw the dot then
-	// we get the starting heh first
-	MyMesh::HalfedgeHandle heh_init = model.heh_init;
-	MyMesh::HalfedgeHandle heh = heh_init;
-
-	// we will only draw the dot if heh is valid
-	if (heh.is_valid()) {
-		glPointSize(8);
-		glBegin(GL_POINTS);
-
-		do {
-			// get vh handler
-			MyMesh::VertexHandle vhF = model.boundaryModel.mesh.from_vertex_handle(heh);
-			// get color from property
-			glm::vec3 color = model.boundaryModel.mesh.property(model.vColor, vhF);
-			// get texture coordinate from property
-			glm::vec2 textCoor = model.boundaryModel.mesh.property(model.texCoord, vhF);
-
-			glColor3f(color[0], color[1], color[2]);
-			glVertex3f(textCoor[0], textCoor[1], 0);
-
-			heh = model.boundaryModel.mesh.next_halfedge_handle(heh);
-		} while (heh != heh_init);
-
-		glEnd();
-	}
 
 	glutSwapBuffers();
 }
