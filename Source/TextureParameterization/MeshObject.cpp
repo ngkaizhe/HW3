@@ -268,9 +268,6 @@ void MeshObject::CalculateBoundaryPoints()
 		glm::vec3(0, 0, 1),
 		glm::vec3(1, 0, 0),
 		glm::vec3(0, 1, 0),
-		glm::vec3(1, 1, 0),
-		glm::vec3(0, 1, 1),
-		glm::vec3(1, 0, 1),
 	};
 
 	// record which vertex, we have already added to the boundary model
@@ -285,7 +282,8 @@ void MeshObject::CalculateBoundaryPoints()
 		std::vector<MyMesh::VertexHandle> face_vhandles;
 
 		// find each fv iterator
-		for (MyMesh::FaceVertexIter fv_it = model.mesh.fv_iter(fh); fv_it.is_valid(); ++fv_it) {
+		int j = 0;
+		for (MyMesh::FaceVertexIter fv_it = model.mesh.fv_iter(fh); fv_it.is_valid(); ++fv_it, j++) {
 			// get each vertex handler
 			MyMesh::Point p = model.mesh.point(*fv_it);
 			MyMesh::VertexHandle vh;
@@ -304,7 +302,7 @@ void MeshObject::CalculateBoundaryPoints()
 			// set the "pointer" to have a link between new vertex
 			// old vertex linked to new vertex
 			boundaryModel.mesh.property(oldVH, vh) = *fv_it;
-			boundaryModel.mesh.property(vColor, vh) = colors[i % colors.size()];
+			boundaryModel.mesh.property(vColor, vh) = colors[j % colors.size()];
 
 			// new vertex linked to old vertex
 			model.mesh.property(newVH, *fv_it) = vh;
@@ -408,18 +406,18 @@ void MeshObject::CalculateBoundaryPoints()
 			}
 			// PLUSX
 			else if (currentDis > 1 && currentDis <= 2) {
-				currentDis -= 1;
-				currentTexCoor = glm::vec2(currentDis, 0);
+				float tcurrentDis = currentDis - 1;
+				currentTexCoor = glm::vec2(tcurrentDis, 1);
 			}
-			// PLUSY
+			// MINUSY
 			else if (currentDis > 2 && currentDis <= 3) {
-				currentDis -= 2;
-				currentTexCoor = glm::vec2(1, 1 - currentDis);
+				float tcurrentDis = currentDis - 2;
+				currentTexCoor = glm::vec2(1, 1 - tcurrentDis);
 			}
-			// PLUSY
+			// MINUSX
 			else if (currentDis > 3 && currentDis <= 4) {
-				currentDis -= 3;
-				currentTexCoor = glm::vec2(1 - currentDis, 0);
+				float tcurrentDis = currentDis - 3;
+				currentTexCoor = glm::vec2(1 - tcurrentDis, 0);
 			}
 
 			else {

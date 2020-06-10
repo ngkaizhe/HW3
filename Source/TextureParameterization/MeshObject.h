@@ -54,14 +54,10 @@ public:
 	// heh init should be public var, so we could used it in the main render
 	MyMesh::HalfedgeHandle heh_init;
 
-private:
-	GLMesh model;
-	std::vector<unsigned int> selectedFace;
-	std::vector<unsigned int*> fvIDsPtr;
-	std::vector<int> elemCount;
-
+	// when getting property from main, we need the mesh
 	GLMesh boundaryModel;
 
+	// when getting property from main, we need the property name too
 	// property part for old vertex
 	OpenMesh::VPropHandleT<glm::vec3> vColor;
 	OpenMesh::VPropHandleT<OpenMesh::VertexHandle> newVH;
@@ -73,5 +69,11 @@ private:
 
 	// property part for old edge
 	OpenMesh::EPropHandleT<float> weight;
+
+private:
+	GLMesh model;
+	std::vector<unsigned int> selectedFace;
+	std::vector<unsigned int*> fvIDsPtr;
+	std::vector<int> elemCount;
 };
 
