@@ -121,7 +121,7 @@ void InitData()
 {
 	ResourcePath::shaderPath = "./Shader/" + ProjectName + "/";
 	ResourcePath::imagePath = "./Imgs/" + ProjectName + "/";
-	ResourcePath::modelPath = "./Model/UnionSphere.obj";
+	ResourcePath::modelPath = "./Model/armadillo.obj";
 
 	//Initialize shaders
 	///////////////////////////	

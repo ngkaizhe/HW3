@@ -8,6 +8,9 @@
 
 struct OpenMesh::VertexHandle const OpenMesh::PolyConnectivity::InvalidVertexHandle;
 
+// helper function to find the degree between 3 vertex
+float getRadianBetween2Lines(MyMesh::Point pBase, MyMesh::Point p1, MyMesh::Point p2);
+
 #pragma region MyMesh
 
 MyMesh::MyMesh()
@@ -182,7 +185,29 @@ bool MeshObject::Init(std::string fileName)
 
 	// compute all weight of the edge handle now
 	for (MyMesh::EIter e_it = model.mesh.edges_begin(); e_it != model.mesh.edges_end(); ++e_it) {
-		model.mesh.property(this->weight, *e_it) = 1;
+		MyMesh::Point v0, v1, v2, v3;
+		// find v0,v1,v2,v3
+
+		// find one of the half edge handle
+		MyMesh::HalfedgeHandle heh0 = model.mesh.halfedge_handle(*e_it , 0);
+		v0 = model.mesh.point(model.mesh.from_vertex_handle(heh0));
+		v1 = model.mesh.point(model.mesh.to_vertex_handle(heh0));
+
+		heh0 = model.mesh.next_halfedge_handle(heh0);
+		v2 = model.mesh.point(model.mesh.to_vertex_handle(heh0));
+
+		// find the opposite half edge
+		MyMesh::HalfedgeHandle heh1 = model.mesh.halfedge_handle(*e_it, 1);
+		heh1 = model.mesh.next_halfedge_handle(heh1);
+		v3 = model.mesh.point(model.mesh.to_vertex_handle(heh1));
+
+		// get the radian of v1, v2, v0
+		double rad1 = getRadianBetween2Lines(v2, v1, v0);
+		// get the radian of v1, v3, v0
+		double rad2 = getRadianBetween2Lines(v3, v1, v0);
+
+		// set the weight
+		model.mesh.property(this->weight, *e_it) = (1 / glm::tan(rad1)) + (1 / glm::tan(rad2));
 	}
 
 	return retV;
@@ -404,7 +429,6 @@ void MeshObject::CalculateBoundaryPoints()
 			glm::vec2 currentTexCoor;
 
 			// transfer current distance to the uv space
-
 			// PLUSY
 			if (currentDis >= 0 && currentDis <= 1) {
 				currentTexCoor = glm::vec2(0, currentDis);
@@ -442,24 +466,35 @@ void MeshObject::CalculateBoundaryPoints()
 		glPointSize(8);
 		glBegin(GL_POINTS);
 
-		// run through the boundary vertices and draw it on our left part model
-		heh = heh_init;
+		for (MyMesh::FIter f_it = boundaryModel.mesh.faces_begin(); f_it != boundaryModel.mesh.faces_end(); ++f_it) {
+			// for each face, we draw its vertex
+			for (MyMesh::FaceVertexIter fv_it = boundaryModel.mesh.fv_begin(*f_it); fv_it != boundaryModel.mesh.fv_end(*f_it); ++fv_it) {
+				// get vh handler
+				MyMesh::VertexHandle vhF = *fv_it;
+				// get color from property
+				glm::vec3 color = boundaryModel.mesh.property(this->vColor, vhF);
+				// get texture coordinate from property
+				MyMesh::Point v_point = boundaryModel.mesh.point(vhF);
 
-		do {
-			MyMesh::VertexHandle vhFrom = boundaryModel.mesh.from_vertex_handle(heh);
-			MyMesh::Point vPoint = boundaryModel.mesh.point(vhFrom);
-
-			// set color
-			glm::vec3 color = boundaryModel.mesh.property(this->vColor, vhFrom);
-			glColor4f(color[0], color[1], color[2], 1);
-			// draw vertex
-			glVertex3f(vPoint[0], vPoint[1], vPoint[2]);
-
-			// goto next half edge
-			heh = boundaryModel.mesh.next_halfedge_handle(heh);
-		} while (heh != heh_init);
+				glColor3f(color[0], color[1], color[2]);
+				glVertex3f(v_point[0], v_point[1], v_point[2]);
+			}
+		}
 		glEnd();
 	}
 
 	boundaryModel.mesh.update_normals();
+}
+
+// helper function to find the degree between 3 vertex
+float getRadianBetween2Lines(MyMesh::Point pBase, MyMesh::Point p1, MyMesh::Point p2) {
+	glm::vec3 vBase = glm::vec3(pBase[0], pBase[1], pBase[2]);
+	glm::vec3 v1 = glm::vec3(p1[0], p1[1], p1[2]);
+	glm::vec3 v2 = glm::vec3(p2[0], p2[1], p2[2]);
+
+	glm::vec3 a = vBase - v1;
+	glm::vec3 b = vBase - v2;
+
+	float radian = glm::acos(glm::dot(a, b) / (glm::length(a) * glm::length(b)));
+	return radian;
 }
