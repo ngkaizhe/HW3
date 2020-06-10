@@ -180,6 +180,11 @@ bool MeshObject::Init(std::string fileName)
 	boundaryModel.mesh.add_property(isBoundary);
 	boundaryModel.mesh.add_property(vColor);
 
+	// compute all weight of the edge handle now
+	for (MyMesh::EIter e_it = model.mesh.edges_begin(); e_it != model.mesh.edges_end(); ++e_it) {
+		model.mesh.property(this->weight, *e_it) = 1;
+	}
+
 	return retV;
 }
 

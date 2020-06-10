@@ -56,6 +56,7 @@ public:
 
 	// when getting property from main, we need the mesh
 	GLMesh boundaryModel;
+	GLMesh model;
 
 	// when getting property from main, we need the property name too
 	// property part for old vertex
@@ -68,10 +69,9 @@ public:
 	OpenMesh::VPropHandleT<glm::vec2> texCoord;
 
 	// property part for old edge
-	OpenMesh::EPropHandleT<float> weight;
+	OpenMesh::EPropHandleT<double> weight;
 
 private:
-	GLMesh model;
 	std::vector<unsigned int> selectedFace;
 	std::vector<unsigned int*> fvIDsPtr;
 	std::vector<int> elemCount;
