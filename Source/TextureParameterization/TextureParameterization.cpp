@@ -213,7 +213,10 @@ void RenderMeshWindow()
 		glLoadIdentity();
 		glMultMatrixf(value_ptr(mvMat));
 
-		model.CalculateBoundaryPoints();
+		// calculate the total boundary points from the selected face
+		if (selectionMode == SelectionMode::ADD_TEXTURE) {
+			model.CalculateBoundaryPoints();
+		}
 	}
 
 	glUseProgram(0);
