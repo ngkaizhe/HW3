@@ -1,15 +1,12 @@
 #version 410 core
 
-out vec4 fragColor;
+in vec2 TexCoord;
 
-in VertexData
-{
-	vec2 texcoord;
-} vertexData;
+out vec4 fragColor;
 
 uniform sampler2D tex;
 
 void main()
 {
-	fragColor = texture(tex, vertexData.texcoord).rgba;
+	fragColor = texture(tex, TexCoord);
 }

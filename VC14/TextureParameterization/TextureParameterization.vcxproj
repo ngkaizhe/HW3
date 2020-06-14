@@ -119,6 +119,7 @@
     <ClCompile Include="..\..\Source\ShaderObject.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\DrawModelShader.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\DrawPickingFaceShader.cpp" />
+    <ClCompile Include="..\..\Source\TextureParameterization\DrawTextureShader.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\OpenMesh.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\PickingShader.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\PickingTexture.cpp" />
@@ -126,7 +127,6 @@
     <ClCompile Include="..\..\Source\TextureParameterization\MeshObject.cpp" />
     <ClCompile Include="..\..\Source\tiny_obj_loader.cpp" />
     <ClCompile Include="..\..\Source\ViewManager.cpp" />
-    <ClCompile Include="DrawTextureShader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Source\TextureParameterization\DrawModelShader.h" />
@@ -144,6 +144,8 @@
     <None Include="..\..\Assets\Shader\TextureParameterization\drawPickingFace.fs.glsl" />
     <None Include="..\..\Assets\Shader\TextureParameterization\drawPickingFace.gs.glsl" />
     <None Include="..\..\Assets\Shader\TextureParameterization\drawPickingFace.vs.glsl" />
+    <None Include="..\..\Assets\Shader\TextureParameterization\drawTexture.fs.glsl" />
+    <None Include="..\..\Assets\Shader\TextureParameterization\drawTexture.vs.glsl" />
     <None Include="..\..\Assets\Shader\TextureParameterization\picking.fs.glsl" />
     <None Include="..\..\Assets\Shader\TextureParameterization\picking.vs.glsl" />
   </ItemGroup>

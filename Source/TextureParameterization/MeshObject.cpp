@@ -2,6 +2,9 @@
 #include <Eigen/Sparse>
 #include <map>
 #include <algorithm>
+#include<Eigen/Sparse>
+
+using namespace Eigen;
 
 #define Quad
 //#define Harmonic
@@ -10,6 +13,9 @@ struct OpenMesh::VertexHandle const OpenMesh::PolyConnectivity::InvalidVertexHan
 
 // helper function to find the degree between 3 vertex
 float getRadianBetween2Lines(MyMesh::Point pBase, MyMesh::Point p1, MyMesh::Point p2);
+// helper function to match RowNumber to VertexHandleID
+unsigned int getMatNumber(std::vector<unsigned int>, int);
+unsigned int getVHID(std::vector<unsigned int>, int);
 
 #pragma region MyMesh
 
@@ -24,22 +30,6 @@ MyMesh::MyMesh()
 MyMesh::~MyMesh()
 {
 
-}
-
-int MyMesh::FindVertex(MyMesh::Point pointToFind)
-{
-	int idx = -1;
-	for (MyMesh::VertexIter v_it = vertices_begin(); v_it != vertices_end(); ++v_it)
-	{
-		MyMesh::Point p = point(*v_it);
-		if (pointToFind == p)
-		{
-			idx = v_it->idx();
-			break;
-		}
-	}
-
-	return idx;
 }
 
 void MyMesh::ClearMesh()
@@ -180,7 +170,6 @@ bool MeshObject::Init(std::string fileName)
 	// add property for boundary model/ new model
 	boundaryModel.mesh.add_property(texCoord);
 	boundaryModel.mesh.add_property(oldVH);
-	boundaryModel.mesh.add_property(isBoundary);
 
 	// compute all weight of the edge handle now
 	for (MyMesh::EIter e_it = model.mesh.edges_begin(); e_it != model.mesh.edges_end(); ++e_it) {
@@ -352,9 +341,6 @@ void MeshObject::CalculateBoundaryPoints()
 			// get the distance between this 2 vertices
 			totalLength3DSpace += glm::distance(glm::vec3(p1[0], p1[1], p1[2]), glm::vec3(p2[0], p2[1], p2[2]));
 
-			// set isBoundary value of property for the boundary model mesh
-			boundaryModel.mesh.property(isBoundary, vh1) = true;
-
 			// goto next half edge
 			heh = boundaryModel.mesh.next_halfedge_handle(heh);
 		} while (heh != heh_init);
@@ -426,7 +412,160 @@ void MeshObject::CalculateBoundaryPoints()
 		}
 	}
 
+	// find the middle point
+	std::vector<unsigned int> MatNumMapToVHID;
+	// solve linear equation
+	// we should run through 2 loops (vertex handle iter)
+	// first loop is to initialize the mapping between MatIDMapToVHID (vertex handle iter)
+	for (MyMesh::VertexIter v_it = boundaryModel.mesh.vertices_begin(); v_it != boundaryModel.mesh.vertices_end(); ++v_it) {
+		// we only fill the vertex that isn't a boundary
+		if (!boundaryModel.mesh.is_boundary(*v_it)) {
+			MatNumMapToVHID.push_back(v_it->idx());
+		}
+	}
+
+	if (MatNumMapToVHID.size() > 0) {
+		// initialize the matrix
+		// known
+		SparseMatrix<double> A(MatNumMapToVHID.size(), MatNumMapToVHID.size());
+		VectorXd BX(MatNumMapToVHID.size());
+		VectorXd BY(MatNumMapToVHID.size());
+
+		int m = MatNumMapToVHID.size();
+		// reset all matrix to 0
+		for (int i = 0; i < m; i++) {
+			for (int j = 0; j < m; j++) {
+				A.coeffRef(i, j) = 0;
+			}
+		}
+		for (int i = 0; i < m; i++) {
+			BX[i] = 0;
+			BY[i] = 0;
+		}
+
+		// second loop is to fill up the matrix
+		for (MyMesh::VertexIter v_it = boundaryModel.mesh.vertices_begin(); v_it != boundaryModel.mesh.vertices_end(); ++v_it) {
+			// if vertex is not boundary vertex
+			if (!boundaryModel.mesh.is_boundary(*v_it)) {
+
+				int row = getMatNumber(MatNumMapToVHID, v_it->idx());
+				double totalWeight = 0;
+				// find the old vertex handle of the base vertex(middle one)
+				MyMesh::VertexHandle vh_oldBase = boundaryModel.mesh.property(this->oldVH, *v_it);
+
+				// we use one ring to find the vertex close to not boundary vertex
+				for (MyMesh::VertexVertexIter vv_it = boundaryModel.mesh.vv_iter(*v_it); vv_it.is_valid(); ++vv_it) {
+					// find the old vertex handle of the outer vertex
+					MyMesh::VertexHandle vh_oldOut = boundaryModel.mesh.property(this->oldVH, *vv_it);
+
+					// weight is putting at the old model, so
+					// get the edge handle first(from the old model)
+					MyMesh::HalfedgeHandle tempheh = model.mesh.find_halfedge(vh_oldBase, vh_oldOut);
+					MyMesh::EdgeHandle eh = model.mesh.edge_handle(tempheh);
+					// get the weight from the edge handle
+					double weight = model.mesh.property(this->weight, eh);
+					totalWeight += weight;
+
+					// if the vertex found is boundary we put to B
+					// boundary textCoor should be known
+					if (boundaryModel.mesh.is_boundary(*vv_it)) {
+						glm::vec2 texCoor = boundaryModel.mesh.property(this->texCoord, *vv_it);
+						BX[row] += (weight * texCoor.x);
+						BY[row] += (weight * texCoor.y);
+
+						/*double tBX = BX[0];
+						double tBY = BY[0];
+
+						cout << "TBX -> " << tBX << ", TBY -> " << tBY << '\n';*/
+					}
+					// else we put to A(-1)
+					// unboundary textCoor should be unknown
+					else {
+						int col = getMatNumber(MatNumMapToVHID, vv_it->idx());
+						// we put the weight inside
+						A.coeffRef(row, col) = -1 * weight;
+					}
+				}
+
+				// lastly we put the total weight of the current row weight
+				A.coeffRef(row, row) = totalWeight;
+			}
+		}
+		double tBX = BX[0];
+		double tBY = BY[0];
+		double tA = A.coeffRef(0, 0);
+
+		// solve the linear equation with eigen
+		// AX = (BX)
+		// X = (A^(-1))(BX)
+		// AY = (BY)
+		// Y = (A^(-1))(BY)
+		A.makeCompressed();
+		SparseQR<SparseMatrix<double>, COLAMDOrdering<int>> linearSolver;
+		linearSolver.compute(A);
+		VectorXd X = linearSolver.solve(BX);
+		VectorXd Y = linearSolver.solve(BY);
+
+		// place all X to the correct uv
+		for (int i = 0; i < MatNumMapToVHID.size(); i++) {
+			int vhID = MatNumMapToVHID[i];
+			MyMesh::VertexHandle vh = boundaryModel.mesh.vertex_handle(vhID);
+			boundaryModel.mesh.property(texCoord, vh).x = X[i];
+			boundaryModel.mesh.property(texCoord, vh).y = Y[i];
+		}
+	}
+
 	boundaryModel.mesh.update_normals();
+}
+
+void MeshObject::RenderTextureFace()
+{
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+
+	// set the location of position and texture coordinate
+	std::vector<glm::vec3> positions;
+	std::vector<glm::vec2> texCoords;
+
+	// we will loop through all faces
+	// loop through its face vertex and save its position to positions
+	for (MyMesh::FaceIter f_it = boundaryModel.mesh.faces_begin(); f_it != boundaryModel.mesh.faces_end(); f_it++) {
+		// find the face vertex iterator
+		for (MyMesh::FaceVertexIter fv_it = boundaryModel.mesh.fv_begin(*f_it); fv_it != boundaryModel.mesh.fv_end(*f_it); fv_it++) {
+			glm::vec3 position;
+			glm::vec2 texCoor = boundaryModel.mesh.property(this->texCoord, *fv_it);
+			MyMesh::Point point = boundaryModel.mesh.point(*fv_it);
+			position = glm::vec3(point[0], point[1], point[2]);
+
+			// add position and texcoordinates to the vector
+			positions.push_back(position);
+			texCoords.push_back(texCoor);
+		}
+	}
+
+	unsigned int VBO, VAO;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * positions.size() + sizeof(glm::vec2) * texCoords.size(), NULL, GL_DYNAMIC_DRAW);
+
+	// add position
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * positions.size(), &positions[0]);
+	// add texcoord
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * positions.size(), sizeof(glm::vec2) * texCoords.size(), &texCoords[0]);
+
+	// position attribute
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	// texture coord attribute
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)(sizeof(glm::vec3) * positions.size()));
+	glEnableVertexAttribArray(1);
+
+	glDrawArrays(GL_TRIANGLES, 0, boundaryModel.mesh.n_faces() * 3);
 }
 
 // helper function to find the degree between 3 vertex
@@ -440,4 +579,23 @@ float getRadianBetween2Lines(MyMesh::Point pBase, MyMesh::Point p1, MyMesh::Poin
 
 	float radian = glm::acos(glm::dot(a, b) / (glm::length(a) * glm::length(b)));
 	return radian;
+}
+
+// helper function to match RowNumber to VertexHandleID
+unsigned int getMatNumber(std::vector<unsigned int> MatNumMapToVHID, int vhID) {
+	for (int i = 0; i < MatNumMapToVHID.size(); i++) {
+		if (MatNumMapToVHID[i] == vhID) {
+			return i;
+		}
+	}
+	// we shouldn't meet here
+	throw "Row Number couldn't find the index you provided, please check!";
+}
+
+unsigned int getVHID(std::vector<unsigned int> MatNumMapToVHID, int rowNumber) {
+	if (rowNumber >= MatNumMapToVHID.size()) {
+		// we shouldn't meet here
+		throw "Row Number couldn't find the index you provided, please check!";
+	}
+	return MatNumMapToVHID[rowNumber];
 }

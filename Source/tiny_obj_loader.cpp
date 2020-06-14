@@ -1,4 +1,4 @@
-#include "../Include/TinyOBJ/tiny_obj_loader.h"
+#include "TinyOBJ/tiny_obj_loader.h"
 #include <string>
 #include <vector>
 #include <map>

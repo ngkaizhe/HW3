@@ -12,14 +12,14 @@
 #endif
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "../Include/TinyOBJ/tiny_obj_loader.h"
+#include "TinyOBJ/tiny_obj_loader.h"
 
 #define GLM_SWIZZLE
-#include "../Include/GLM/glm/glm.hpp"
-#include "../Include/GLM/glm/gtc/matrix_transform.hpp"
-#include "../Include/GLM/glm/gtc/type_ptr.hpp"
-#include "../Include/GLM/glm/gtx/rotate_vector.hpp"
-#include "../Include/GLM/glm/gtc/random.hpp"
+#include "GLM/glm/glm.hpp"
+#include "GLM/glm/gtc/matrix_transform.hpp"
+#include "GLM/glm/gtc/type_ptr.hpp"
+#include "GLM/glm/gtx/rotate_vector.hpp"
+#include "GLM/glm/gtc/random.hpp"
 
 #ifdef _MSC_VER
 	#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)

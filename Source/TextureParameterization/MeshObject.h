@@ -13,7 +13,6 @@ public:
 	MyMesh();
 	~MyMesh();
 
-	int FindVertex(MyMesh::Point pointToFind);
 	void ClearMesh();
 };
 
@@ -50,6 +49,7 @@ public:
 	void DeleteSelectedFace(unsigned int faceID);
 
 	void CalculateBoundaryPoints();
+	void RenderTextureFace();
 
 	// heh init should be public var, so we could used it in the main render
 	MyMesh::HalfedgeHandle heh_init;
@@ -64,7 +64,6 @@ public:
 
 	// property part for new vertex
 	OpenMesh::VPropHandleT<OpenMesh::VertexHandle> oldVH;
-	OpenMesh::VPropHandleT<bool> isBoundary;
 	OpenMesh::VPropHandleT<glm::vec2> texCoord;
 
 	// property part for old edge

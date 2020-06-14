@@ -13,7 +13,7 @@
 #include<Eigen/Sparse>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../../Include/STB/stb_image_write.h"
+#include "STB/stb_image_write.h"
 
 using namespace glm;
 using namespace std;
@@ -41,9 +41,7 @@ DrawModelShader drawModelShader;
 DrawPickingFaceShader drawPickingFaceShader;
 PickingShader pickingShader;
 PickingTexture pickingTexture;
-
-// vbo for drawing point
-GLuint vboPoint;
+DrawTextureShader drawTextureShader;
 
 int mainWindow, subWindow1, subWindow2;
 enum SelectionMode
@@ -57,10 +55,6 @@ SelectionMode selectionMode = ADD_FACE;
 TwBar* bar;
 TwEnumVal SelectionModeEV[] = { {ADD_FACE, "Add face"}, {DEL_FACE, "Delete face"}, {ADD_TEXTURE, "Add texture"} };
 TwType SelectionModeType;
-
-// helper function to match RowNumber to VertexHandleID
-unsigned int getMatNumber(std::vector<unsigned int> , int);
-unsigned int getVHID(std::vector<unsigned int> , int);
 
 
 void SetupGUI()
@@ -109,7 +103,7 @@ void InitOpenGL()
 void InitData()
 {
 	ResourcePath::shaderPath = "./Shader/" + ProjectName + "/";
-	ResourcePath::imagePath = "./Imgs/" + ProjectName + "/";
+	ResourcePath::imagePath = "./Imgs/";
 	ResourcePath::modelPath = "./Model/UnionSphere.obj";
 
 	//Initialize shaders
@@ -118,8 +112,7 @@ void InitData()
 	pickingShader.Init();
 	pickingTexture.Init(windowWidth, windowHeight);
 	drawPickingFaceShader.Init();
-
-	glGenBuffers(1, &vboPoint);
+	drawTextureShader.Init();
 
 	//Load model to shader program
 	My_LoadModel();
@@ -205,17 +198,16 @@ void RenderMeshWindow()
 		model.RenderSelectedFace();
 		drawPickingFaceShader.Disable();
 
-		// draw the points that is boundary
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glMultMatrixf(value_ptr(pMat));
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glMultMatrixf(value_ptr(mvMat));
-
 		// calculate the total boundary points from the selected face
 		if (selectionMode == SelectionMode::ADD_TEXTURE) {
 			model.CalculateBoundaryPoints();
+
+			// draw the texture on the boundary model face
+			drawTextureShader.Enable();
+			drawTextureShader.SetMVMat(mvMat);
+			drawTextureShader.SetPMat(pMat);
+			model.RenderTextureFace();
+			drawTextureShader.Disable();
 		}
 	}
 
@@ -230,111 +222,6 @@ void RenderTextureWindow() {
 
 	glClearColor(.7f, .7f, .7f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	std::vector<unsigned int> MatNumMapToVHID;
-	// solve linear equation
-	// we should run through 2 loops (vertex handle iter)
-	// first loop is to initialize the mapping between MatIDMapToVHID (vertex handle iter)
-	for (MyMesh::VertexIter v_it = model.boundaryModel.mesh.vertices_begin(); v_it != model.boundaryModel.mesh.vertices_end(); ++v_it) {
-		// we only fill the vertex that isn't a boundary
-		if (!model.boundaryModel.mesh.is_boundary(*v_it)) {
-			MatNumMapToVHID.push_back(v_it->idx());
-		}
-	}
-
-	// Debug message
-	// cout << "Total Unboundary Vertices Amount is -> " << MatIDMapToVHID.size() << '\n';
-
-	if (MatNumMapToVHID.size() > 0) {
-		// initialize the matrix
-		// known
-		SparseMatrix<double> A(MatNumMapToVHID.size(), MatNumMapToVHID.size());
-		VectorXd BX(MatNumMapToVHID.size());
-		VectorXd BY(MatNumMapToVHID.size());
-
-		int m = MatNumMapToVHID.size();
-		// reset all matrix to 0
-		for (int i = 0; i < m; i++) {
-			for (int j = 0; j < m; j++) {
-				A.coeffRef(i, j) = 0;
-			}
-		}
-		for (int i = 0; i < m; i++) {
-			BX[i] = 0;
-			BY[i] = 0;
-		}
-
-		// second loop is to fill up the matrix
-		for (MyMesh::VertexIter v_it = model.boundaryModel.mesh.vertices_begin(); v_it != model.boundaryModel.mesh.vertices_end(); ++v_it) {
-			// if vertex is not boundary vertex
-			if (!model.boundaryModel.mesh.is_boundary(*v_it)) {
-
-				int row = getMatNumber(MatNumMapToVHID, v_it->idx());
-				double totalWeight = 0;
-				// find the old vertex handle of the base vertex(middle one)
-				MyMesh::VertexHandle vh_oldBase = model.boundaryModel.mesh.property(model.oldVH, *v_it);
-
-				// we use one ring to find the vertex close to not boundary vertex
-				for (MyMesh::VertexVertexIter vv_it = model.boundaryModel.mesh.vv_iter(*v_it); vv_it.is_valid(); ++vv_it) {
-					// find the old vertex handle of the outer vertex
-					MyMesh::VertexHandle vh_oldOut = model.boundaryModel.mesh.property(model.oldVH, *vv_it);
-
-					// weight is putting at the old model, so
-					// get the edge handle first(from the old model)
-					MyMesh::HalfedgeHandle tempheh = model.model.mesh.find_halfedge(vh_oldBase, vh_oldOut);
-					MyMesh::EdgeHandle eh = model.model.mesh.edge_handle(tempheh);
-					// get the weight from the edge handle
-					double weight = model.model.mesh.property(model.weight, eh);
-					totalWeight += weight;
-
-					// if the vertex found is boundary we put to B
-					// boundary textCoor should be known
-					if (model.boundaryModel.mesh.is_boundary(*vv_it)) {
-						glm::vec2 texCoor = model.boundaryModel.mesh.property(model.texCoord, *vv_it);
-						BX[row] += (weight * texCoor.x);
-						BY[row] += (weight * texCoor.y);
-
-						/*double tBX = BX[0];
-						double tBY = BY[0];
-
-						cout << "TBX -> " << tBX << ", TBY -> " << tBY << '\n';*/
-					}
-					// else we put to A(-1)
-					// unboundary textCoor should be unknown
-					else {
-						int col = getMatNumber(MatNumMapToVHID, vv_it->idx());
-						// we put the weight inside
-						A.coeffRef(row, col) = -1 * weight;
-					}
-				}
-
-				// lastly we put the total weight of the current row weight
-				A.coeffRef(row, row) = totalWeight;
-			}
-		}
-		double tBX = BX[0];
-		double tBY = BY[0];
-		double tA = A.coeffRef(0, 0);
-
-		// solve the linear equation with eigen
-		// AX = (BX)
-		// X = (A^(-1))(BX)
-		// AY = (BY)
-		// Y = (A^(-1))(BY)
-		A.makeCompressed();
-		SparseQR<SparseMatrix<double>, COLAMDOrdering<int>> linearSolver;
-		linearSolver.compute(A);
-		VectorXd X = linearSolver.solve(BX);
-		VectorXd Y = linearSolver.solve(BY);
-
-		// place all X to the correct uv
-		for (int i = 0; i < MatNumMapToVHID.size(); i++) {
-			int vhID = MatNumMapToVHID[i];
-			MyMesh::VertexHandle vh = model.boundaryModel.mesh.vertex_handle(vhID);
-			model.boundaryModel.mesh.property(model.texCoord, vh).x = X[i];
-			model.boundaryModel.mesh.property(model.texCoord, vh).y = Y[i];
-		}
-	}
 	
 	// draw bg rectangular
 	glMatrixMode(GL_PROJECTION);
@@ -522,24 +409,5 @@ int main(int argc, char* argv[])
 	glutMainLoop();
 
 	return 0;
-}
-
-// helper function to match RowNumber to VertexHandleID
-unsigned int getMatNumber(std::vector<unsigned int> MatNumMapToVHID, int vhID) {
-	for (int i = 0; i < MatNumMapToVHID.size(); i++) {
-		if (MatNumMapToVHID[i] == vhID) {
-			return i;
-		}
-	}
-	// we shouldn't meet here
-	throw "Row Number couldn't find the index you provided, please check!";
-}
-
-unsigned int getVHID(std::vector<unsigned int> MatNumMapToVHID, int rowNumber) {
-	if (rowNumber >= MatNumMapToVHID.size()) {
-		// we shouldn't meet here
-		throw "Row Number couldn't find the index you provided, please check!";
-	}
-	return MatNumMapToVHID[rowNumber];
 }
 

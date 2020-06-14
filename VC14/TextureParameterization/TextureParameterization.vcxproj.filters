@@ -57,7 +57,7 @@
     <ClCompile Include="..\..\Source\TextureParameterization\TextureParameterization.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
-    <ClCompile Include="DrawTextureShader.cpp">
+    <ClCompile Include="..\..\Source\TextureParameterization\DrawTextureShader.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
   </ItemGroup>
@@ -107,6 +107,12 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="..\..\Assets\Shader\TextureParameterization\drawPickingFace.gs.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\Assets\Shader\TextureParameterization\drawTexture.fs.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\Assets\Shader\TextureParameterization\drawTexture.vs.glsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
