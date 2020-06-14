@@ -7,8 +7,11 @@ out vec2 TexCoord;
 uniform mat4 um4mv;
 uniform mat4 um4p;
 
+// offset
+uniform vec2 offset;
+
 void main()
 {
 	gl_Position = um4p * um4mv * vec4(aPos, 1.0);
-	TexCoord = aTexCoord;
+	TexCoord = aTexCoord + offset;
 }

@@ -94,6 +94,10 @@ TwEnumVal ModelSelectedEV[] = {
 TwType ModelSelectedType;
 
 
+// the offset moved
+float TextureXOffset = 0.5;
+float TextureYOffset = 0.5;
+
 void SetupGUI()
 {
 #ifdef _MSC_VER
@@ -267,6 +271,7 @@ void RenderMeshWindow()
 			drawTextureShader.Enable();
 			drawTextureShader.SetMVMat(mvMat);
 			drawTextureShader.SetPMat(pMat);
+			glUniform2f(drawTextureShader.GetUniformLocation("offset"), TextureXOffset, TextureYOffset);
 			modelPtr->RenderTextureFace();
 			drawTextureShader.Disable();
 		}
@@ -399,6 +404,19 @@ void MyKeyboard(unsigned char key, int x, int y)
 	if (!TwEventKeyboardGLUT(key, x, y))
 	{
 		meshWindowCam.keyEvents(key);
+	}
+
+	if (key == 'i') {
+		TextureYOffset += 0.1f;
+	}
+	else if (key == 'k') {
+		TextureYOffset -= 0.1f;
+	}
+	else if (key == 'j') {
+		TextureXOffset += 0.1f;
+	}
+	else if (key == 'l') {
+		TextureXOffset -= 0.1f;
 	}
 }
 
