@@ -96,7 +96,31 @@ TwEnumVal ModelSelectedEV[] = {
 TwType ModelSelectedType;
 
 // texture part
+enum TextureSelected {
+	BRICKWORK,
+	CHECKERBOARD,
+	NEGX,
+	NEGZ,
+	NTUST,
+	POSX,
+	POSY,
+	POSZ,
+	WOOD,
+};
 
+TextureSelected textureSelected = BRICKWORK;
+TwEnumVal TextureSelectedEV[] = {
+	{BRICKWORK, "Brickwork"},
+	{CHECKERBOARD, "CheckBoard"},
+	{NEGX, "Negative X"},
+	{NEGZ, "Negative Z"},
+	{NTUST, "Ntust"},
+	{POSX, "Pos X"},
+	{POSY, "Pos Y"},
+	{POSZ, "Pos Z"},
+	{WOOD, "Wood"},
+};
+TwType TextureSelectedType;
 
 // the offset moved
 float TextureXOffset = 0.5;
@@ -123,6 +147,11 @@ void SetupGUI()
 	ModelSelectedType = TwDefineEnum("Model Selected Object", ModelSelectedEV, 12);
 	// Adding season to bar
 	TwAddVarRW(bar, "Model Selected", ModelSelectedType, &modelSelected, NULL);
+
+	// texture part
+	TextureSelectedType = TwDefineEnum("Texture Selected Object", TextureSelectedEV, 9);
+	// Adding season to bar
+	TwAddVarRW(bar, "Texture Selected", TextureSelectedType, &textureSelected, NULL);
 }
 
 void My_LoadModel()
@@ -211,6 +240,10 @@ void RenderMeshWindow()
 	if (currentModelSelected != modelSelected) {
 		modelPtr = &models[modelSelected];
 		currentModelSelected = modelSelected;
+	}
+	// recheck for the texture too
+	if (drawTextureShader.currentTextureUsedID != textureSelected) {
+		drawTextureShader.currentTextureUsedID = textureSelected;
 	}
 
 	glutSetWindow(subWindow1);

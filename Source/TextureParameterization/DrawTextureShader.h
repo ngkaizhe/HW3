@@ -14,10 +14,12 @@ public:
 	void Enable();
 	void Disable();
 
+	int currentTextureUsedID;
+
 private:
 	GLuint um4pLocation;
 	GLuint um4mvLocation;
 
-	unsigned int texture1;
+	unsigned int textures[9];
 };
 
