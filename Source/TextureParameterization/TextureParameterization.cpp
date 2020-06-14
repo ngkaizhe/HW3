@@ -48,6 +48,8 @@ PickingTexture pickingTexture;
 DrawTextureShader drawTextureShader;
 
 int mainWindow, subWindow1, subWindow2;
+
+// selection part
 enum SelectionMode
 {
 	ADD_FACE,
@@ -56,6 +58,11 @@ enum SelectionMode
 };
 SelectionMode selectionMode = ADD_FACE;
 
+TwBar* bar;
+TwEnumVal SelectionModeEV[] = { {ADD_FACE, "Add face"}, {DEL_FACE, "Delete face"}, {ADD_TEXTURE, "Add texture"} };
+TwType SelectionModeType;
+
+// model part
 enum ModelSelected {
 	UNIONSPHERE,
 	ARMADILLO,
@@ -72,11 +79,6 @@ enum ModelSelected {
 };
 ModelSelected modelSelected = BEAR;
 ModelSelected currentModelSelected = modelSelected;
-
-TwBar* bar;
-TwEnumVal SelectionModeEV[] = { {ADD_FACE, "Add face"}, {DEL_FACE, "Delete face"}, {ADD_TEXTURE, "Add texture"} };
-TwType SelectionModeType;
-
 TwEnumVal ModelSelectedEV[] = { 
 	{UNIONSPHERE, "Union Sphere"},
 	{ARMADILLO, "Armadillo"},
@@ -92,6 +94,8 @@ TwEnumVal ModelSelectedEV[] = {
 	{XYZRGB_DRAGON_100K, "XYZ dragon"},
 };
 TwType ModelSelectedType;
+
+// texture part
 
 
 // the offset moved
