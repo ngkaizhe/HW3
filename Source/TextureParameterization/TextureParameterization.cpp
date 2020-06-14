@@ -34,13 +34,17 @@ mat4			proj_matrix;		// projection matrix
 float			aspect;
 ViewManager		meshWindowCam;
 
-MeshObject model;
+// load all models in init
+vector<MeshObject> models;
+MeshObject* modelPtr;
 
 // shaders
 DrawModelShader drawModelShader;
 DrawPickingFaceShader drawPickingFaceShader;
 PickingShader pickingShader;
 PickingTexture pickingTexture;
+
+// load all texture inside
 DrawTextureShader drawTextureShader;
 
 int mainWindow, subWindow1, subWindow2;
@@ -52,9 +56,42 @@ enum SelectionMode
 };
 SelectionMode selectionMode = ADD_FACE;
 
+enum ModelSelected {
+	UNIONSPHERE,
+	ARMADILLO,
+	BEAR,
+	DANCER,
+	DANCING_CHILDREN,
+	FELINE,
+	FERTILTY,
+	GARGOYLE,
+	NEPTUNE,
+	OCTOPUS,
+	SCREWDRIVER,
+	XYZRGB_DRAGON_100K,
+};
+ModelSelected modelSelected = UNIONSPHERE;
+ModelSelected currentModelSelected = modelSelected;
+
 TwBar* bar;
 TwEnumVal SelectionModeEV[] = { {ADD_FACE, "Add face"}, {DEL_FACE, "Delete face"}, {ADD_TEXTURE, "Add texture"} };
 TwType SelectionModeType;
+
+TwEnumVal ModelSelectedEV[] = { 
+	{UNIONSPHERE, "Union Sphere"},
+	{ARMADILLO, "Armadillo"},
+	{BEAR, "Bear"},
+	{DANCER, "Dancer"},
+	{DANCING_CHILDREN, "Dancing children"},
+	{FELINE, "Feline"},
+	{FERTILTY, "Fertilty"},
+	{GARGOYLE, "Gargoyle"},
+	{NEPTUNE, "Neptune"},
+	{OCTOPUS, "Octopus"},
+	{SCREWDRIVER, "Screw Driver"},
+	{XYZRGB_DRAGON_100K, "XYZ dragon"},
+};
+TwType ModelSelectedType;
 
 
 void SetupGUI()
@@ -73,18 +110,36 @@ void SetupGUI()
 	SelectionModeType = TwDefineEnum("SelectionModeType", SelectionModeEV, 3);
 	// Adding season to bar
 	TwAddVarRW(bar, "SelectionMode", SelectionModeType, &selectionMode, NULL);
+
+	// model part
+	ModelSelectedType = TwDefineEnum("Model Selected Object", ModelSelectedEV, 12);
+	// Adding season to bar
+	TwAddVarRW(bar, "Model Selected", ModelSelectedType, &modelSelected, NULL);
 }
 
 void My_LoadModel()
 {
-	if (model.Init(ResourcePath::modelPath))
-	{
-		puts("Load Model");
+	vector<string> modelPaths = {
+		"./Model/UnionSphere.obj",
+		/*"./Model/armadillo.obj",
+		"./Model/bear.obj",
+		"./Model/dancer.obj",
+		"./Model/dancing_children.obj",
+		"./Model/feline.obj",
+		"./Model/fertilty.obj",
+		"./Model/gargoyle.obj",
+		"./Model/neptune.obj",
+		"./Model/octopus.obj",
+		"./Model/screwdriver.obj",
+		"./Model/xyzrgb_dragon_100k.obj",*/
+	};
+
+	models.resize(modelPaths.size());
+	for (int i = 0; i < modelPaths.size(); i++) {
+		models[i].model.Init(modelPaths[i]);
 	}
-	else
-	{
-		puts("Load Model Failed");
-	}
+
+	modelPtr = &models[0];
 }
 
 void InitOpenGL()
@@ -144,6 +199,12 @@ void Reshape(int width, int height)
 // GLUT callback. Called to draw the scene.
 void RenderMeshWindow()
 {
+	// recheck whether do we need to change the pointer
+	if (currentModelSelected != modelSelected) {
+		modelPtr = &models[modelSelected];
+		currentModelSelected = modelSelected;
+	}
+
 	glutSetWindow(subWindow1);
 
 	//Update shaders' input variable
@@ -162,7 +223,7 @@ void RenderMeshWindow()
 	pickingShader.SetMVMat(value_ptr(mvMat));
 	pickingShader.SetPMat(value_ptr(pMat));
 
-	model.Render();
+	models[0].Render();
 
 	pickingShader.Disable();
 	pickingTexture.Disable();
@@ -183,7 +244,7 @@ void RenderMeshWindow()
 	drawModelShader.SetMVMat(mvMat);
 	drawModelShader.SetPMat(pMat);
 
-	model.Render();
+	models[0].Render();
 
 	drawModelShader.Disable();
 	
@@ -195,18 +256,18 @@ void RenderMeshWindow()
 		drawPickingFaceShader.Enable();
 		drawPickingFaceShader.SetMVMat(value_ptr(mvMat));
 		drawPickingFaceShader.SetPMat(value_ptr(pMat));
-		model.RenderSelectedFace();
+		models[0].RenderSelectedFace();
 		drawPickingFaceShader.Disable();
 
 		// calculate the total boundary points from the selected face
 		if (selectionMode == SelectionMode::ADD_TEXTURE) {
-			model.CalculateBoundaryPoints();
+			models[0].CalculateBoundaryPoints();
 
 			// draw the texture on the boundary model face
 			drawTextureShader.Enable();
 			drawTextureShader.SetMVMat(mvMat);
 			drawTextureShader.SetPMat(pMat);
-			model.RenderTextureFace();
+			models[0].RenderTextureFace();
 			drawTextureShader.Disable();
 		}
 	}
@@ -245,13 +306,13 @@ void RenderTextureWindow() {
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glBegin(GL_TRIANGLES);
 	glColor4f(1, 1, 1, 1.0);
-	for (MyMesh::FIter f_it = model.boundaryModel.mesh.faces_begin(); f_it != model.boundaryModel.mesh.faces_end(); ++f_it) {
+	for (MyMesh::FIter f_it = models[0].boundaryModel.mesh.faces_begin(); f_it != models[0].boundaryModel.mesh.faces_end(); ++f_it) {
 		// for each face, we draw its vertex
-		for (MyMesh::FaceVertexIter fv_it = model.boundaryModel.mesh.fv_begin(*f_it); fv_it != model.boundaryModel.mesh.fv_end(*f_it); ++fv_it) {
+		for (MyMesh::FaceVertexIter fv_it = models[0].boundaryModel.mesh.fv_begin(*f_it); fv_it != models[0].boundaryModel.mesh.fv_end(*f_it); ++fv_it) {
 			// get vh handler
 			MyMesh::VertexHandle vhF = *fv_it;
 			// get texture coordinate from property
-			glm::vec2 textCoor = model.boundaryModel.mesh.property(model.texCoord, vhF);
+			glm::vec2 textCoor = models[0].boundaryModel.mesh.property(models[0].texCoord, vhF);
 
 			glVertex3f(textCoor[0], textCoor[1], 0);
 		}
@@ -294,14 +355,14 @@ void SelectionHandler(unsigned int x, unsigned int y)
 	{
 		if (faceID != 0)
 		{
-			model.AddSelectedFace(faceID - 1);
+			models[0].AddSelectedFace(faceID - 1);
 		}
 	}
 	else if (selectionMode == DEL_FACE)
 	{
 		if (faceID != 0)
 		{
-			model.DeleteSelectedFace(faceID - 1);
+			models[0].DeleteSelectedFace(faceID - 1);
 		}
 	}
 
