@@ -10,7 +10,6 @@
 #include "PickingTexture.h"
 #include "DrawPickingFaceShader.h"
 #include "DrawTextureShader.h"
-#include "DrawPointShader.h"
 #include<Eigen/Sparse>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -42,7 +41,6 @@ DrawModelShader drawModelShader;
 DrawPickingFaceShader drawPickingFaceShader;
 PickingShader pickingShader;
 PickingTexture pickingTexture;
-DrawPointShader drawPointShader;
 
 // vbo for drawing point
 GLuint vboPoint;
@@ -120,7 +118,6 @@ void InitData()
 	pickingShader.Init();
 	pickingTexture.Init(windowWidth, windowHeight);
 	drawPickingFaceShader.Init();
-	drawPointShader.Init();
 
 	glGenBuffers(1, &vboPoint);
 

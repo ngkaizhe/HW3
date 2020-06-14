@@ -57,9 +57,6 @@
     <ClCompile Include="..\..\Source\TextureParameterization\TextureParameterization.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\TextureParameterization\DrawPointShader.cpp">
-      <Filter>原始程式檔</Filter>
-    </ClCompile>
     <ClCompile Include="DrawTextureShader.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
@@ -81,9 +78,6 @@
       <Filter>標頭檔</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Source\TextureParameterization\DrawPickingFaceShader.h">
-      <Filter>標頭檔</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\TextureParameterization\DrawPointShader.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
     <ClInclude Include="DrawTextureShader.h">

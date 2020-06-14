@@ -119,7 +119,6 @@
     <ClCompile Include="..\..\Source\ShaderObject.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\DrawModelShader.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\DrawPickingFaceShader.cpp" />
-    <ClCompile Include="..\..\Source\TextureParameterization\DrawPointShader.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\OpenMesh.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\PickingShader.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\PickingTexture.cpp" />
@@ -132,7 +131,6 @@
   <ItemGroup>
     <ClInclude Include="..\..\Source\TextureParameterization\DrawModelShader.h" />
     <ClInclude Include="..\..\Source\TextureParameterization\DrawPickingFaceShader.h" />
-    <ClInclude Include="..\..\Source\TextureParameterization\DrawPointShader.h" />
     <ClInclude Include="..\..\Source\TextureParameterization\PickingShader.h" />
     <ClInclude Include="..\..\Source\TextureParameterization\PickingTexture.h" />
     <ClInclude Include="..\..\Source\TextureParameterization\MeshObject.h" />
