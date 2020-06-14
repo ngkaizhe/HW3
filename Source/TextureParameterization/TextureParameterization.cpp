@@ -70,7 +70,7 @@ enum ModelSelected {
 	SCREWDRIVER,
 	XYZRGB_DRAGON_100K,
 };
-ModelSelected modelSelected = UNIONSPHERE;
+ModelSelected modelSelected = BEAR;
 ModelSelected currentModelSelected = modelSelected;
 
 TwBar* bar;
@@ -121,7 +121,7 @@ void My_LoadModel()
 {
 	vector<string> modelPaths = {
 		"./Model/UnionSphere.obj",
-		/*"./Model/armadillo.obj",
+		"./Model/armadillo.obj",
 		"./Model/bear.obj",
 		"./Model/dancer.obj",
 		"./Model/dancing_children.obj",
@@ -131,15 +131,15 @@ void My_LoadModel()
 		"./Model/neptune.obj",
 		"./Model/octopus.obj",
 		"./Model/screwdriver.obj",
-		"./Model/xyzrgb_dragon_100k.obj",*/
+		"./Model/xyzrgb_dragon_100k.obj",
 	};
 
 	models.resize(modelPaths.size());
 	for (int i = 0; i < modelPaths.size(); i++) {
-		models[i].model.Init(modelPaths[i]);
+		models[i].Init(modelPaths[i]);
 	}
 
-	modelPtr = &models[0];
+	modelPtr = &models[currentModelSelected];
 }
 
 void InitOpenGL()
@@ -223,7 +223,7 @@ void RenderMeshWindow()
 	pickingShader.SetMVMat(value_ptr(mvMat));
 	pickingShader.SetPMat(value_ptr(pMat));
 
-	models[0].Render();
+	modelPtr->Render();
 
 	pickingShader.Disable();
 	pickingTexture.Disable();
@@ -244,7 +244,7 @@ void RenderMeshWindow()
 	drawModelShader.SetMVMat(mvMat);
 	drawModelShader.SetPMat(pMat);
 
-	models[0].Render();
+	modelPtr->Render();
 
 	drawModelShader.Disable();
 	
@@ -256,18 +256,18 @@ void RenderMeshWindow()
 		drawPickingFaceShader.Enable();
 		drawPickingFaceShader.SetMVMat(value_ptr(mvMat));
 		drawPickingFaceShader.SetPMat(value_ptr(pMat));
-		models[0].RenderSelectedFace();
+		modelPtr->RenderSelectedFace();
 		drawPickingFaceShader.Disable();
 
 		// calculate the total boundary points from the selected face
 		if (selectionMode == SelectionMode::ADD_TEXTURE) {
-			models[0].CalculateBoundaryPoints();
+			modelPtr->CalculateBoundaryPoints();
 
 			// draw the texture on the boundary model face
 			drawTextureShader.Enable();
 			drawTextureShader.SetMVMat(mvMat);
 			drawTextureShader.SetPMat(pMat);
-			models[0].RenderTextureFace();
+			modelPtr->RenderTextureFace();
 			drawTextureShader.Disable();
 		}
 	}
@@ -306,13 +306,13 @@ void RenderTextureWindow() {
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	glBegin(GL_TRIANGLES);
 	glColor4f(1, 1, 1, 1.0);
-	for (MyMesh::FIter f_it = models[0].boundaryModel.mesh.faces_begin(); f_it != models[0].boundaryModel.mesh.faces_end(); ++f_it) {
+	for (MyMesh::FIter f_it = modelPtr->boundaryModel.mesh.faces_begin(); f_it != modelPtr->boundaryModel.mesh.faces_end(); ++f_it) {
 		// for each face, we draw its vertex
-		for (MyMesh::FaceVertexIter fv_it = models[0].boundaryModel.mesh.fv_begin(*f_it); fv_it != models[0].boundaryModel.mesh.fv_end(*f_it); ++fv_it) {
+		for (MyMesh::FaceVertexIter fv_it = modelPtr->boundaryModel.mesh.fv_begin(*f_it); fv_it != modelPtr->boundaryModel.mesh.fv_end(*f_it); ++fv_it) {
 			// get vh handler
 			MyMesh::VertexHandle vhF = *fv_it;
 			// get texture coordinate from property
-			glm::vec2 textCoor = models[0].boundaryModel.mesh.property(models[0].texCoord, vhF);
+			glm::vec2 textCoor = modelPtr->boundaryModel.mesh.property(modelPtr->texCoord, vhF);
 
 			glVertex3f(textCoor[0], textCoor[1], 0);
 		}
@@ -355,14 +355,14 @@ void SelectionHandler(unsigned int x, unsigned int y)
 	{
 		if (faceID != 0)
 		{
-			models[0].AddSelectedFace(faceID - 1);
+			modelPtr->AddSelectedFace(faceID - 1);
 		}
 	}
 	else if (selectionMode == DEL_FACE)
 	{
 		if (faceID != 0)
 		{
-			models[0].DeleteSelectedFace(faceID - 1);
+			modelPtr->DeleteSelectedFace(faceID - 1);
 		}
 	}
 
