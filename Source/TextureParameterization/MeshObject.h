@@ -48,7 +48,7 @@ public:
 	void RenderSelectedFace();
 	bool AddSelectedFace(unsigned int faceID);
 	void DeleteSelectedFace(unsigned int faceID);
-	bool FindClosestPoint(unsigned int faceID, glm::vec3 worldPos, glm::vec3& closestPos);
+
 	void CalculateBoundaryPoints();
 
 	// heh init should be public var, so we could used it in the main render

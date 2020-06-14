@@ -253,39 +253,6 @@ void MeshObject::DeleteSelectedFace(unsigned int faceID)
 	selectedFace.erase(std::remove(selectedFace.begin(), selectedFace.end(), faceID), selectedFace.end());
 }
 
-bool MeshObject::FindClosestPoint(unsigned int faceID, glm::vec3 worldPos, glm::vec3& closestPos)
-{
-	OpenMesh::FaceHandle fh = model.mesh.face_handle(faceID);
-	if (!fh.is_valid())
-	{
-		return false;
-	}
-	
-	double minDistance = 0.0;
-	MyMesh::Point p(worldPos.x, worldPos.y, worldPos.z);
-	MyMesh::FVIter fv_it = model.mesh.fv_iter(fh);
-	MyMesh::VertexHandle closestVH = *fv_it;
-	MyMesh::Point v1 = model.mesh.point(*fv_it);
-	++fv_it;
-
-	minDistance = (p - v1).norm();
-	for (; fv_it.is_valid(); ++fv_it)
-	{
-		MyMesh::Point v = model.mesh.point(*fv_it);
-		double distance = (p - v).norm();
-		if (minDistance > distance)
-		{
-			minDistance = distance;
-			closestVH = *fv_it;
-		}
-	}
-	MyMesh::Point closestPoint = model.mesh.point(closestVH);
-	closestPos.x = closestPoint[0];
-	closestPos.y = closestPoint[1];
-	closestPos.z = closestPoint[2];
-	return true;
-}
-
 void MeshObject::CalculateBoundaryPoints()
 {
 	boundaryModel.mesh.clear();

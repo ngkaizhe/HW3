@@ -21,7 +21,7 @@ using namespace std;
 using namespace Eigen;
 
 glm::vec3 worldPos;
-bool updateFlag = false;
+
 bool isRightButtonPress = false;
 GLuint currentFaceID = 0;
 int currentMouseX = 0;
@@ -52,13 +52,12 @@ enum SelectionMode
 {
 	ADD_FACE,
 	DEL_FACE,
-	SELECT_POINT,
 	ADD_TEXTURE,
 };
 SelectionMode selectionMode = ADD_FACE;
 
 TwBar* bar;
-TwEnumVal SelectionModeEV[] = { {ADD_FACE, "Add face"}, {DEL_FACE, "Delete face"}, {SELECT_POINT, "Point"}, {ADD_TEXTURE, "Add texture"} };
+TwEnumVal SelectionModeEV[] = { {ADD_FACE, "Add face"}, {DEL_FACE, "Delete face"}, {ADD_TEXTURE, "Add texture"} };
 TwType SelectionModeType;
 
 // helper function to match RowNumber to VertexHandleID
@@ -88,14 +87,6 @@ void My_LoadModel()
 {
 	if (model.Init(ResourcePath::modelPath))
 	{
-		/*int id = 0;
-		while (model.AddSelectedFace(id))
-		{
-			++id;
-		}
-		model.Parameterization();
-		drawTexture = true;*/
-
 		puts("Load Model");
 	}
 	else
@@ -229,67 +220,6 @@ void RenderMeshWindow()
 	}
 
 	glUseProgram(0);
-
-	// render closest point
-	if (selectionMode == SelectionMode::SELECT_POINT)
-	{
-		if (updateFlag)
-		{
-			float depthValue = 0;
-			int windowX = currentMouseX;
-			int windowY = windowHeight - currentMouseY;
-			glReadPixels(windowX, windowY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depthValue);
-
-			GLint _viewport[4];
-			glGetIntegerv(GL_VIEWPORT, _viewport);
-			glm::vec4 viewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
-			glm::vec3 windowPos(windowX, windowY, depthValue);
-			glm::vec3 wp = glm::unProject(windowPos, mvMat, pMat, viewport);
-			model.FindClosestPoint(currentFaceID - 1, wp, worldPos);
-
-			updateFlag = false;
-		}
-		/*
-			Using OpenGL 1.1 to draw point
-		*/
-		glPushMatrix();
-		glPushAttrib(GL_POINT_BIT);
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			glMultMatrixf(glm::value_ptr(pMat));
-
-			glMatrixMode(GL_MODELVIEW);
-			glLoadIdentity();
-			glMultMatrixf(glm::value_ptr(mvMat));
-
-			glPointSize(15.0f);
-			glColor3f(1.0, 0.0, 1.0);
-			glBegin(GL_POINTS);
-			glVertex3fv(glm::value_ptr(worldPos));
-			glEnd();
-		glPopAttrib();
-		glPopMatrix();
-
-		
-		glBindBuffer(GL_ARRAY_BUFFER, vboPoint);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3), glm::value_ptr(worldPos), GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(0);
-
-		glm::vec4 pointColor(1.0, 0.0, 1.0, 1.0);
-		drawPointShader.Enable();
-		drawPointShader.SetMVMat(mvMat);
-		drawPointShader.SetPMat(pMat);
-		drawPointShader.SetPointColor(pointColor);
-		drawPointShader.SetPointSize(15.0);
-
-		glDrawArrays(GL_POINTS, 0, 1);
-
-		drawPointShader.Disable();
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	}
 
 	TwDraw();
 	glutSwapBuffers();
@@ -486,12 +416,6 @@ void SelectionHandler(unsigned int x, unsigned int y)
 		{
 			model.DeleteSelectedFace(faceID - 1);
 		}
-	}
-	else if (selectionMode == SELECT_POINT)
-	{
-		currentMouseX = x;
-		currentMouseY = y;
-		updateFlag = true;
 	}
 
 	else if (selectionMode == ADD_TEXTURE) {
