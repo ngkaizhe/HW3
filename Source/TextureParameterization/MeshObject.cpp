@@ -273,8 +273,34 @@ bool MeshObject::FindClosestPoint(unsigned int faceID, glm::vec3 worldPos, glm::
 	closestPos.y = closestPoint[1];
 	closestPos.z = closestPoint[2];
 
+	// recalculate the faces
+	selectedFace.clear();
 	// find the closest point upwards to face (find 2 rings upwards)
+	// ups to 2 rings
+	std::vector<int> boundaryIDs;
+	boundaryIDs.push_back(closestVH.idx());
+	for (int i = 0; i < 5; i++) {
+		std::vector<int> newBoundaryIDs;
+		for (int j = 0; j < boundaryIDs.size(); j++) {
+			// find surrounded faces from vertex
+			MyMesh::VertexHandle currentVH = model.mesh.vertex_handle(boundaryIDs[j]);
+			for (MyMesh::VertexFaceIter vf_it = model.mesh.vf_begin(currentVH); vf_it != model.mesh.vf_end(currentVH); vf_it++) {
+				std::vector<unsigned int>::iterator s_it = 
+					std::find(selectedFace.begin(), selectedFace.end(), (unsigned int)(vf_it->idx()));
 
+				// we cant find the face id inside, so it must be a new face, so we push back to record it
+				if (s_it == selectedFace.end()) {
+					selectedFace.push_back(vf_it->idx());
+				}
+			}
+
+			// we push the surrounded vertices for next iteration
+			for (MyMesh::VertexVertexIter vv_it = model.mesh.vv_begin(currentVH); vv_it != model.mesh.vv_end(currentVH); vv_it++) {
+				newBoundaryIDs.push_back(vv_it->idx());
+			}
+		}
+		boundaryIDs = newBoundaryIDs;
+	}
 
 	return true;
 }

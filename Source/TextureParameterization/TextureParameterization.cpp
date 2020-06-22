@@ -170,17 +170,17 @@ void My_LoadModel()
 {
 	vector<string> modelPaths = {
 		"./Model/UnionSphere.obj",
-		//"./Model/armadillo.obj",
-		//"./Model/bear.obj",
-		//"./Model/dancer.obj",
-		//"./Model/dancing_children.obj",
-		//"./Model/feline.obj",
-		//"./Model/fertilty.obj",
-		//"./Model/gargoyle.obj",
-		//"./Model/neptune.obj",
-		//"./Model/octopus.obj",
-		//"./Model/screwdriver.obj",
-		//"./Model/xyzrgb_dragon_100k.obj",
+		"./Model/armadillo.obj",
+		"./Model/bear.obj",
+		"./Model/dancer.obj",
+		"./Model/dancing_children.obj",
+		"./Model/feline.obj",
+		"./Model/fertilty.obj",
+		"./Model/gargoyle.obj",
+		"./Model/neptune.obj",
+		"./Model/octopus.obj",
+		"./Model/screwdriver.obj",
+		"./Model/xyzrgb_dragon_100k.obj",
 	};
 
 	models.resize(modelPaths.size());
@@ -306,33 +306,29 @@ void RenderMeshWindow()
 	
 	// render selected face
 	if (selectionMode == SelectionMode::ADD_FACE || 
-		selectionMode == SelectionMode::DEL_FACE ||
-		selectionMode == SelectionMode::ADD_TEXTURE)
+		selectionMode == SelectionMode::DEL_FACE)
 	{
 		drawPickingFaceShader.Enable();
 		drawPickingFaceShader.SetMVMat(value_ptr(mvMat));
 		drawPickingFaceShader.SetPMat(value_ptr(pMat));
 		modelPtr->RenderSelectedFace();
 		drawPickingFaceShader.Disable();
-
-		// calculate the total boundary points from the selected face
-		if (selectionMode == SelectionMode::ADD_TEXTURE) {
-			modelPtr->CalculateBoundaryPoints();
-
-			// draw the texture on the boundary model face
-			drawTextureShader.Enable();
-			drawTextureShader.SetMVMat(mvMat);
-			drawTextureShader.SetPMat(pMat);
-			glUniform2f(drawTextureShader.GetUniformLocation("offset"), TextureXOffset, TextureYOffset);
-			modelPtr->RenderTextureFace();
-			drawTextureShader.Disable();
-		}
 	}
 
-	glUseProgram(0);
+	else if (selectionMode == SelectionMode::ADD_TEXTURE) {
+		modelPtr->CalculateBoundaryPoints();
+
+		// draw the texture on the boundary model face
+		drawTextureShader.Enable();
+		drawTextureShader.SetMVMat(mvMat);
+		drawTextureShader.SetPMat(pMat);
+		glUniform2f(drawTextureShader.GetUniformLocation("offset"), TextureXOffset, TextureYOffset);
+		modelPtr->RenderTextureFace();
+		drawTextureShader.Disable();
+	}
 
 	// render closest point
-	if (selectionMode == SelectionMode::DRAG_TEXTURE)
+	else if (selectionMode == SelectionMode::DRAG_TEXTURE)
 	{
 		if (updateFlag)
 		{
@@ -390,14 +386,19 @@ void RenderMeshWindow()
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-		// render the selected face
-		drawPickingFaceShader.Enable();
-		drawPickingFaceShader.SetMVMat(value_ptr(mvMat));
-		drawPickingFaceShader.SetPMat(value_ptr(pMat));
-		modelPtr->RenderSelectedFace();
-		drawPickingFaceShader.Disable();
+		// calculate the boundary points
+		modelPtr->CalculateBoundaryPoints();
+
+		// draw the texture on the boundary model face
+		drawTextureShader.Enable();
+		drawTextureShader.SetMVMat(mvMat);
+		drawTextureShader.SetPMat(pMat);
+		glUniform2f(drawTextureShader.GetUniformLocation("offset"), TextureXOffset, TextureYOffset);
+		modelPtr->RenderTextureFace();
+		drawTextureShader.Disable();
 	}
 
+	glUseProgram(0);
 
 	TwDraw();
 	glutSwapBuffers();
