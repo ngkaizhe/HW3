@@ -17,6 +17,8 @@ float getRadianBetween2Lines(MyMesh::Point pBase, MyMesh::Point p1, MyMesh::Poin
 unsigned int getMatNumber(std::vector<unsigned int>, int);
 unsigned int getVHID(std::vector<unsigned int>, int);
 
+extern int faceSize;
+
 #pragma region MyMesh
 
 MyMesh::MyMesh()
@@ -273,33 +275,39 @@ bool MeshObject::FindClosestPoint(unsigned int faceID, glm::vec3 worldPos, glm::
 	closestPos.y = closestPoint[1];
 	closestPos.z = closestPoint[2];
 
-	// recalculate the faces
-	selectedFace.clear();
-	// find the closest point upwards to face (find 2 rings upwards)
-	// ups to 2 rings
-	std::vector<int> boundaryIDs;
-	boundaryIDs.push_back(closestVH.idx());
-	for (int i = 0; i < 5; i++) {
-		std::vector<int> newBoundaryIDs;
-		for (int j = 0; j < boundaryIDs.size(); j++) {
-			// find surrounded faces from vertex
-			MyMesh::VertexHandle currentVH = model.mesh.vertex_handle(boundaryIDs[j]);
-			for (MyMesh::VertexFaceIter vf_it = model.mesh.vf_begin(currentVH); vf_it != model.mesh.vf_end(currentVH); vf_it++) {
-				std::vector<unsigned int>::iterator s_it = 
-					std::find(selectedFace.begin(), selectedFace.end(), (unsigned int)(vf_it->idx()));
+	// we will only recalculate if it is different
+	if (this->closestVH != closestVH) {
+		recalculateUV = true;
+		this->closestVH = closestVH;
 
-				// we cant find the face id inside, so it must be a new face, so we push back to record it
-				if (s_it == selectedFace.end()) {
-					selectedFace.push_back(vf_it->idx());
+		// recalculate the faces
+		selectedFace.clear();
+		// find the closest point upwards to face (find 2 rings upwards)
+		// ups to 2 rings
+		std::vector<int> boundaryIDs;
+		boundaryIDs.push_back(closestVH.idx());
+		for (int i = 0; i < faceSize; i++) {
+			std::vector<int> newBoundaryIDs;
+			for (int j = 0; j < boundaryIDs.size(); j++) {
+				// find surrounded faces from vertex
+				MyMesh::VertexHandle currentVH = model.mesh.vertex_handle(boundaryIDs[j]);
+				for (MyMesh::VertexFaceIter vf_it = model.mesh.vf_begin(currentVH); vf_it != model.mesh.vf_end(currentVH); vf_it++) {
+					std::vector<unsigned int>::iterator s_it =
+						std::find(selectedFace.begin(), selectedFace.end(), (unsigned int)(vf_it->idx()));
+
+					// we cant find the face id inside, so it must be a new face, so we push back to record it
+					if (s_it == selectedFace.end()) {
+						selectedFace.push_back(vf_it->idx());
+					}
+				}
+
+				// we push the surrounded vertices for next iteration
+				for (MyMesh::VertexVertexIter vv_it = model.mesh.vv_begin(currentVH); vv_it != model.mesh.vv_end(currentVH); vv_it++) {
+					newBoundaryIDs.push_back(vv_it->idx());
 				}
 			}
-
-			// we push the surrounded vertices for next iteration
-			for (MyMesh::VertexVertexIter vv_it = model.mesh.vv_begin(currentVH); vv_it != model.mesh.vv_end(currentVH); vv_it++) {
-				newBoundaryIDs.push_back(vv_it->idx());
-			}
+			boundaryIDs = newBoundaryIDs;
 		}
-		boundaryIDs = newBoundaryIDs;
 	}
 
 	return true;
@@ -308,6 +316,8 @@ bool MeshObject::FindClosestPoint(unsigned int faceID, glm::vec3 worldPos, glm::
 
 void MeshObject::CalculateBoundaryPoints()
 {
+	recalculateUV = false;
+
 	boundaryModel.mesh.clear();
 	boundaryModel.mesh.request_vertex_normals();
 	boundaryModel.mesh.request_face_normals();
@@ -607,29 +617,32 @@ void MeshObject::RenderTextureFace()
 		}
 	}
 
-	unsigned int VBO, VAO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
 
-	glBindVertexArray(VAO);
+	if (positions.size() != 0) {
+		unsigned int VBO, VAO;
+		glGenVertexArrays(1, &VAO);
+		glGenBuffers(1, &VBO);
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * positions.size() + sizeof(glm::vec2) * texCoords.size(), NULL, GL_DYNAMIC_DRAW);
+		glBindVertexArray(VAO);
 
-	// add position
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * positions.size(), &positions[0]);
-	// add texcoord
-	glBufferSubData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * positions.size(), sizeof(glm::vec2) * texCoords.size(), &texCoords[0]);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * positions.size() + sizeof(glm::vec2) * texCoords.size(), NULL, GL_DYNAMIC_DRAW);
 
-	// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-	glEnableVertexAttribArray(0);
+		// add position
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(glm::vec3) * positions.size(), &positions[0]);
+		// add texcoord
+		glBufferSubData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * positions.size(), sizeof(glm::vec2) * texCoords.size(), &texCoords[0]);
 
-	// texture coord attribute
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)(sizeof(glm::vec3) * positions.size()));
-	glEnableVertexAttribArray(1);
+		// position attribute
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+		glEnableVertexAttribArray(0);
 
-	glDrawArrays(GL_TRIANGLES, 0, boundaryModel.mesh.n_faces() * 3);
+		// texture coord attribute
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), (void*)(sizeof(glm::vec3) * positions.size()));
+		glEnableVertexAttribArray(1);
+
+		glDrawArrays(GL_TRIANGLES, 0, boundaryModel.mesh.n_faces() * 3);
+	}
 }
 
 // helper function to find the degree between 3 vertex

@@ -135,8 +135,23 @@ TwEnumVal TextureSelectedEV[] = {
 TwType TextureSelectedType;
 
 // the offset moved
-float TextureXOffset = 0.5;
-float TextureYOffset = 0.5;
+float TextureXOffset = 0;
+float TextureYOffset = 0;
+
+// drag face size part
+int faceSize = 3;
+TwEnumVal FaceSizeSelectedEV[] = {
+	{2, "2"},
+	{3, "3"},
+	{4, "4"},
+	{5, "5"},
+	{6, "6"},
+	{7, "7"},
+	{8, "8"},
+	{9, "9"},
+	{10, "10"},
+};
+TwType FaceSizeSelectedType;
 
 void SetupGUI()
 {
@@ -164,6 +179,11 @@ void SetupGUI()
 	TextureSelectedType = TwDefineEnum("Texture Selected Object", TextureSelectedEV, 9);
 	// Adding season to bar
 	TwAddVarRW(bar, "Texture Selected", TextureSelectedType, &textureSelected, NULL);
+
+	// face size part
+	FaceSizeSelectedType = TwDefineEnum("Face Size", FaceSizeSelectedEV, 9);
+	// Adding season to bar
+	TwAddVarRW(bar, "Face Size Selected", FaceSizeSelectedType, &faceSize, NULL);
 }
 
 void My_LoadModel()
@@ -316,7 +336,7 @@ void RenderMeshWindow()
 	}
 
 	else if (selectionMode == SelectionMode::ADD_TEXTURE) {
-		modelPtr->CalculateBoundaryPoints();
+		if(modelPtr->recalculateUV)	modelPtr->CalculateBoundaryPoints();
 
 		// draw the texture on the boundary model face
 		drawTextureShader.Enable();
@@ -346,48 +366,9 @@ void RenderMeshWindow()
 
 			updateFlag = false;
 		}
-		/*
-			Using OpenGL 1.1 to draw point
-		*/
-		glPushMatrix();
-		glPushAttrib(GL_POINT_BIT);
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glMultMatrixf(glm::value_ptr(pMat));
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glMultMatrixf(glm::value_ptr(mvMat));
-
-		glPointSize(15.0f);
-		glColor3f(1.0, 0.0, 1.0);
-		glBegin(GL_POINTS);
-		glVertex3fv(glm::value_ptr(worldPos));
-		glEnd();
-		glPopAttrib();
-		glPopMatrix();
-
-
-		glBindBuffer(GL_ARRAY_BUFFER, vboPoint);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3), glm::value_ptr(worldPos), GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glEnableVertexAttribArray(0);
-
-		glm::vec4 pointColor(1.0, 0.0, 1.0, 1.0);
-		drawPointShader.Enable();
-		drawPointShader.SetMVMat(mvMat);
-		drawPointShader.SetPMat(pMat);
-		drawPointShader.SetPointColor(pointColor);
-		drawPointShader.SetPointSize(15.0);
-
-		glDrawArrays(GL_POINTS, 0, 1);
-
-		drawPointShader.Disable();
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 		// calculate the boundary points
-		modelPtr->CalculateBoundaryPoints();
+		if (modelPtr->recalculateUV)	modelPtr->CalculateBoundaryPoints();
 
 		// draw the texture on the boundary model face
 		drawTextureShader.Enable();

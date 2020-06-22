@@ -70,9 +70,14 @@ public:
 	// property part for old edge
 	OpenMesh::EPropHandleT<double> weight;
 
+	bool recalculateUV;
+
 private:
 	std::vector<unsigned int> selectedFace;
 	std::vector<unsigned int*> fvIDsPtr;
 	std::vector<int> elemCount;
+
+	// the closest vh so we dont recalculated again
+	MyMesh::VertexHandle closestVH;
 };
 
