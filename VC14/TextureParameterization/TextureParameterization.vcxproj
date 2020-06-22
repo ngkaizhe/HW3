@@ -119,6 +119,7 @@
     <ClCompile Include="..\..\Source\ShaderObject.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\DrawModelShader.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\DrawPickingFaceShader.cpp" />
+    <ClCompile Include="..\..\Source\TextureParameterization\DrawPointShader.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\DrawTextureShader.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\OpenMesh.cpp" />
     <ClCompile Include="..\..\Source\TextureParameterization\PickingShader.cpp" />
@@ -131,11 +132,12 @@
   <ItemGroup>
     <ClInclude Include="..\..\Source\TextureParameterization\DrawModelShader.h" />
     <ClInclude Include="..\..\Source\TextureParameterization\DrawPickingFaceShader.h" />
+    <ClInclude Include="..\..\Source\TextureParameterization\DrawPointShader.h" />
+    <ClInclude Include="..\..\Source\TextureParameterization\DrawTextureShader.h" />
     <ClInclude Include="..\..\Source\TextureParameterization\PickingShader.h" />
     <ClInclude Include="..\..\Source\TextureParameterization\PickingTexture.h" />
     <ClInclude Include="..\..\Source\TextureParameterization\MeshObject.h" />
     <ClInclude Include="..\..\Source\TextureParameterization\OpenMesh.h" />
-    <ClInclude Include="DrawTextureShader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Assets\Shader\TextureParameterization\drawModel.fs.glsl" />
@@ -144,6 +146,8 @@
     <None Include="..\..\Assets\Shader\TextureParameterization\drawPickingFace.fs.glsl" />
     <None Include="..\..\Assets\Shader\TextureParameterization\drawPickingFace.gs.glsl" />
     <None Include="..\..\Assets\Shader\TextureParameterization\drawPickingFace.vs.glsl" />
+    <None Include="..\..\Assets\Shader\TextureParameterization\drawPoint.fs.glsl" />
+    <None Include="..\..\Assets\Shader\TextureParameterization\drawPoint.vs.glsl" />
     <None Include="..\..\Assets\Shader\TextureParameterization\drawTexture.fs.glsl" />
     <None Include="..\..\Assets\Shader\TextureParameterization\drawTexture.vs.glsl" />
     <None Include="..\..\Assets\Shader\TextureParameterization\picking.fs.glsl" />

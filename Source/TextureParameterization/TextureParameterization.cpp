@@ -10,6 +10,7 @@
 #include "PickingTexture.h"
 #include "DrawPickingFaceShader.h"
 #include "DrawTextureShader.h"
+#include "DrawPointShader.h"
 #include<Eigen/Sparse>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -43,9 +44,14 @@ DrawModelShader drawModelShader;
 DrawPickingFaceShader drawPickingFaceShader;
 PickingShader pickingShader;
 PickingTexture pickingTexture;
+DrawPointShader drawPointShader;
 
 // load all texture inside
 DrawTextureShader drawTextureShader;
+
+// flag to used for find closest point
+bool updateFlag = false;
+unsigned int vboPoint;
 
 int mainWindow, subWindow1, subWindow2;
 
@@ -55,11 +61,17 @@ enum SelectionMode
 	ADD_FACE,
 	DEL_FACE,
 	ADD_TEXTURE,
+	DRAG_TEXTURE,
 };
 SelectionMode selectionMode = ADD_FACE;
 
 TwBar* bar;
-TwEnumVal SelectionModeEV[] = { {ADD_FACE, "Add face"}, {DEL_FACE, "Delete face"}, {ADD_TEXTURE, "Add texture"} };
+TwEnumVal SelectionModeEV[] = { 
+	{ADD_FACE, "Add face"}, 
+	{DEL_FACE, "Delete face"}, 
+	{ADD_TEXTURE, "Add texture"},
+	{DRAG_TEXTURE, "Drag texture"},
+};
 TwType SelectionModeType;
 
 // model part
@@ -77,7 +89,7 @@ enum ModelSelected {
 	SCREWDRIVER,
 	XYZRGB_DRAGON_100K,
 };
-ModelSelected modelSelected = BEAR;
+ModelSelected modelSelected = UNIONSPHERE;
 ModelSelected currentModelSelected = modelSelected;
 TwEnumVal ModelSelectedEV[] = { 
 	{UNIONSPHERE, "Union Sphere"},
@@ -139,7 +151,7 @@ void SetupGUI()
 	TwDefine(" 'Texture Parameter Setting' fontsize='3' color='96 216 224'");
 
 	// Defining season enum type
-	SelectionModeType = TwDefineEnum("SelectionModeType", SelectionModeEV, 3);
+	SelectionModeType = TwDefineEnum("SelectionModeType", SelectionModeEV, 4);
 	// Adding season to bar
 	TwAddVarRW(bar, "SelectionMode", SelectionModeType, &selectionMode, NULL);
 
@@ -158,17 +170,17 @@ void My_LoadModel()
 {
 	vector<string> modelPaths = {
 		"./Model/UnionSphere.obj",
-		"./Model/armadillo.obj",
-		"./Model/bear.obj",
-		"./Model/dancer.obj",
-		"./Model/dancing_children.obj",
-		"./Model/feline.obj",
-		"./Model/fertilty.obj",
-		"./Model/gargoyle.obj",
-		"./Model/neptune.obj",
-		"./Model/octopus.obj",
-		"./Model/screwdriver.obj",
-		"./Model/xyzrgb_dragon_100k.obj",
+		//"./Model/armadillo.obj",
+		//"./Model/bear.obj",
+		//"./Model/dancer.obj",
+		//"./Model/dancing_children.obj",
+		//"./Model/feline.obj",
+		//"./Model/fertilty.obj",
+		//"./Model/gargoyle.obj",
+		//"./Model/neptune.obj",
+		//"./Model/octopus.obj",
+		//"./Model/screwdriver.obj",
+		//"./Model/xyzrgb_dragon_100k.obj",
 	};
 
 	models.resize(modelPaths.size());
@@ -205,6 +217,9 @@ void InitData()
 	pickingTexture.Init(windowWidth, windowHeight);
 	drawPickingFaceShader.Init();
 	drawTextureShader.Init();
+	drawPointShader.Init();
+
+	glGenBuffers(1, &vboPoint);
 
 	//Load model to shader program
 	My_LoadModel();
@@ -316,6 +331,74 @@ void RenderMeshWindow()
 
 	glUseProgram(0);
 
+	// render closest point
+	if (selectionMode == SelectionMode::DRAG_TEXTURE)
+	{
+		if (updateFlag)
+		{
+			float depthValue = 0;
+			int windowX = currentMouseX;
+			int windowY = windowHeight - currentMouseY;
+			glReadPixels(windowX, windowY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depthValue);
+
+			GLint _viewport[4];
+			glGetIntegerv(GL_VIEWPORT, _viewport);
+			glm::vec4 viewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
+			glm::vec3 windowPos(windowX, windowY, depthValue);
+			glm::vec3 wp = glm::unProject(windowPos, mvMat, pMat, viewport);
+			modelPtr->FindClosestPoint(currentFaceID - 1, wp, worldPos);
+
+			updateFlag = false;
+		}
+		/*
+			Using OpenGL 1.1 to draw point
+		*/
+		glPushMatrix();
+		glPushAttrib(GL_POINT_BIT);
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glMultMatrixf(glm::value_ptr(pMat));
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glMultMatrixf(glm::value_ptr(mvMat));
+
+		glPointSize(15.0f);
+		glColor3f(1.0, 0.0, 1.0);
+		glBegin(GL_POINTS);
+		glVertex3fv(glm::value_ptr(worldPos));
+		glEnd();
+		glPopAttrib();
+		glPopMatrix();
+
+
+		glBindBuffer(GL_ARRAY_BUFFER, vboPoint);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3), glm::value_ptr(worldPos), GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+		glm::vec4 pointColor(1.0, 0.0, 1.0, 1.0);
+		drawPointShader.Enable();
+		drawPointShader.SetMVMat(mvMat);
+		drawPointShader.SetPMat(pMat);
+		drawPointShader.SetPointColor(pointColor);
+		drawPointShader.SetPointSize(15.0);
+
+		glDrawArrays(GL_POINTS, 0, 1);
+
+		drawPointShader.Disable();
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// render the selected face
+		drawPickingFaceShader.Enable();
+		drawPickingFaceShader.SetMVMat(value_ptr(mvMat));
+		drawPickingFaceShader.SetPMat(value_ptr(pMat));
+		modelPtr->RenderSelectedFace();
+		drawPickingFaceShader.Disable();
+	}
+
+
 	TwDraw();
 	glutSwapBuffers();
 }
@@ -408,8 +491,11 @@ void SelectionHandler(unsigned int x, unsigned int y)
 		}
 	}
 
-	else if (selectionMode == ADD_TEXTURE) {
-		// start to draw the texture to the screen
+	else if (selectionMode == DRAG_TEXTURE)
+	{
+		currentMouseX = x;
+		currentMouseY = y;
+		updateFlag = true;
 	}
 }
 
